@@ -1,0 +1,142 @@
+# Plan de Implementación
+
+- [x] 1. Escribir test exploratorio de bug condition (datetimes tz-aware)
+  - **Property 1: Bug Condition** — Datetimes Timezone-Aware Causan DBAPIError en Operaciones de Update
+  - **CRITICAL**: Este test DEBE FALLAR en el código sin corregir — el fallo confirma que el bug existe
+  - **NO intentes corregir el test ni el código cuando falle**
+  - **NOTA**: Este test codifica el comportamiento esperado — validará la corrección cuando pase después de la implementación
+  - **GOAL**: Generar contraejemplos que demuestren que `datetime.now(timezone.utc)` produce datetimes tz-aware incompatibles con columnas `TIMESTAMP WITHOUT TIME ZONE`
+  - **Scoped PBT Approach**: Para cada método de update (`update`, `update_status`, `update_rating`, `update_tags`), generar entradas válidas y verificar que los datetimes asignados a `updated_at`, `started_at`, `completed_at` son naive (sin tzinfo) y que el commit se completa sin `DBAPIError`
+  - Crear archivo `tests/test_property_datetime_bugfix.py` con comentario `# Feature: backend-datetime-image-fix, Property 1: Bug Condition — Datetimes naive en updates`
+  - Usar `from __future__ import annotations` al inicio del archivo
+  - Usar sync `def test_*` con `asyncio.run()` dentro (NO usar `@pytest.mark.asyncio` con `@given`)
+  - Usar Hypothesis con `@settings(max_examples=100, deadline=None)`
+  - Estrategias: `st.sampled_from(["pending", "in_progress", "completed"])` para status, `st.integers(min_value=1, max_value=10)` para rating, `st.lists(st.text(min_size=1, max_size=30), max_size=10, unique=True)` para tags
+  - Crear un media item con `MediaService.create()`, luego llamar al método de update correspondiente
+  - Verificar que `result.updated_at.tzinfo is None` (datetime naive)
+  - Verificar que para `update_status("in_progress")` con `started_at=None`, `result.started_at.tzinfo is None`
+  - Verificar que para `update_status("completed")`, `result.completed_at.tzinfo is None`
+  - Usar base de datos SQLite in-memory con `_fresh_session()` (patrón existente en el proyecto)
+  - Ejecutar test en código SIN CORREGIR
+  - **EXPECTED OUTCOME**: Test FALLA (esto es correcto — demuestra que el bug existe porque `datetime.now(timezone.utc)` produce datetimes con `tzinfo=UTC`)
+  - Documentar los contraejemplos encontrados para entender la causa raíz
+  - Marcar tarea como completa cuando el test esté escrito, ejecutado, y el fallo documentado
+  - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
+
+- [x] 2. Escribir test exploratorio de bug condition (imágenes placeholder inexistentes)
+  - **Property 1: Bug Condition** — Imágenes Placeholder No Existen en Disco
+  - **CRITICAL**: Este test DEBE FALLAR en el código sin corregir — el fallo confirma que el bug existe
+  - **NO intentes corregir el test ni el código cuando falle**
+  - **GOAL**: Confirmar que los archivos `default_movie.png`, `default_book.png`, `default_series.png` no existen en `backend/images/`
+  - Crear archivo `tests/test_property_image_placeholder_bugfix.py` con comentario `# Feature: backend-datetime-image-fix, Property 1: Bug Condition — Imágenes placeholder existen en disco`
+  - Usar `from __future__ import annotations` al inicio del archivo
+  - Usar sync `def test_*` con `asyncio.run()` dentro (NO usar `@pytest.mark.asyncio` con `@given`)
+  - Usar Hypothesis con `@settings(max_examples=100, deadline=None)`
+  - Estrategia: `st.sampled_from(["movie", "book", "series"])` para media_type
+  - Para cada media_type, obtener el filename de `_DEFAULT_IMAGES`, construir la ruta completa con `IMAGE_STORAGE_PATH / filename`
+  - Verificar que el archivo existe (`filepath.exists()`) y tiene tamaño > 0 (`filepath.stat().st_size > 0`)
+  - Ejecutar test en código SIN CORREGIR
+  - **EXPECTED OUTCOME**: Test FALLA (esto es correcto — los archivos placeholder no existen en disco)
+  - Documentar los contraejemplos encontrados
+  - Marcar tarea como completa cuando el test esté escrito, ejecutado, y el fallo documentado
+  - _Requirements: 1.6, 1.7_
+
+- [x] 3. Escribir tests de preservación (ANTES de implementar la corrección)
+  - **Property 2: Preservation** — Comportamiento Existente Sin Cambios
+  - **IMPORTANT**: Seguir metodología observation-first
+  - Crear archivo `tests/test_property_preservation_bugfix.py` con comentario `# Feature: backend-datetime-image-fix, Property 2: Preservation — Comportamiento existente sin cambios`
+  - Usar `from __future__ import annotations` al inicio del archivo
+  - Usar sync `def test_*` con `asyncio.run()` dentro (NO usar `@pytest.mark.asyncio` con `@given`)
+  - Usar Hypothesis con `@settings(max_examples=100, deadline=None)`
+  - **Observar en código SIN CORREGIR**:
+    - Crear items → `created_at` y `updated_at` son asignados por `server_default=func.now()` (no por código Python)
+    - Consultar items → timestamps devueltos correctamente en la respuesta
+    - Eliminar items → funciona sin errores de timestamps
+    - Imágenes ya existentes en disco → servidas correctamente
+  - **Tests de preservación a escribir**:
+    - Test 1: Para cualquier `MediaCreate` válido, `create()` retorna un item con `created_at` y `updated_at` no nulos, y ambos son datetimes naive
+    - Test 2: Para cualquier item creado, `get()` retorna el mismo item con timestamps correctos
+    - Test 3: Para cualquier item creado, `delete()` completa sin error
+    - Test 4: Para cualquier item con `image_path` asignado, `_to_response()` construye `image_url` como `/images/<image_path>`
+  - Ejecutar tests en código SIN CORREGIR
+  - **EXPECTED OUTCOME**: Tests PASAN (esto confirma el comportamiento baseline a preservar)
+  - Marcar tarea como completa cuando los tests estén escritos, ejecutados, y pasando en código sin corregir
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7_
+
+- [x] 4. Corrección de datetimes tz-aware en media_service.py
+
+  - [x] 4.1 Implementar la corrección de datetimes
+    - En `backend/services/media_service.py`, cambiar el import `from datetime import datetime, timezone` a `from datetime import datetime` (eliminar `timezone`)
+    - Reemplazar las 5 ocurrencias de `datetime.now(timezone.utc)` por `datetime.utcnow()`:
+      - `update()`: `item.updated_at = datetime.utcnow()`
+      - `update_status()`: `now = datetime.utcnow()`
+      - `update_rating()`: `item.updated_at = datetime.utcnow()`
+      - `update_tags()`: `item.updated_at = datetime.utcnow()`
+    - Esto produce datetimes naive (sin tzinfo), compatibles con columnas `TIMESTAMP WITHOUT TIME ZONE`
+    - Consistente con el resto del codebase que usa `server_default=func.now()`
+    - _Bug_Condition: isBugCondition(input) donde input.method IN ['update', 'update_status', 'update_rating', 'update_tags'] AND asigna datetime.now(timezone.utc)_
+    - _Expected_Behavior: datetime asignado tiene tzinfo=None AND commit completa sin DBAPIError_
+    - _Preservation: Creación de items con server_default, consultas GET, eliminación, servicio de imágenes existentes_
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
+
+  - [x] 4.2 Verificar que el test exploratorio de datetimes ahora pasa
+    - **Property 1: Expected Behavior** — Datetimes Naive en Operaciones de Update
+    - **IMPORTANT**: Re-ejecutar el MISMO test de la tarea 1 — NO escribir un test nuevo
+    - El test de la tarea 1 codifica el comportamiento esperado
+    - Cuando este test pase, confirma que el comportamiento esperado se cumple
+    - Ejecutar `tests/test_property_datetime_bugfix.py`
+    - **EXPECTED OUTCOME**: Test PASA (confirma que el bug está corregido)
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
+
+  - [x] 4.3 Verificar que los tests de preservación siguen pasando
+    - **Property 2: Preservation** — Comportamiento Existente Sin Cambios
+    - **IMPORTANT**: Re-ejecutar los MISMOS tests de la tarea 3 — NO escribir tests nuevos
+    - Ejecutar `tests/test_property_preservation_bugfix.py`
+    - **EXPECTED OUTCOME**: Tests PASAN (confirma que no hay regresiones)
+    - Confirmar que todos los tests siguen pasando después de la corrección
+    - _Requirements: 3.1, 3.2, 3.3_
+
+- [x] 5. Corrección de imágenes placeholder inexistentes
+
+  - [x] 5.1 Crear imágenes placeholder en backend/images/
+    - Crear 3 archivos PNG mínimos válidos en `backend/images/`:
+      - `default_movie.png` — PNG mínimo válido (placeholder para películas)
+      - `default_book.png` — PNG mínimo válido (placeholder para libros)
+      - `default_series.png` — PNG mínimo válido (placeholder para series)
+    - Los archivos deben ser PNGs válidos (con header PNG correcto) para que sean servidos con el content-type adecuado
+    - Pueden ser PNGs mínimos de 1x1 pixel o imágenes simples generadas programáticamente
+    - Los nombres DEBEN coincidir exactamente con los valores en `_DEFAULT_IMAGES` de `image_service.py`
+    - _Bug_Condition: isBugCondition(input) donde input.media_type IN ['movie', 'book', 'series'] AND archivo default no existe en disco_
+    - _Expected_Behavior: archivo existe en backend/images/ AND stat().st_size > 0_
+    - _Preservation: Imágenes previamente almacenadas siguen siendo servidas correctamente_
+    - _Requirements: 2.6, 2.9_
+
+  - [x] 5.2 Verificar que el test exploratorio de imágenes ahora pasa
+    - **Property 1: Expected Behavior** — Imágenes Placeholder Existen en Disco
+    - **IMPORTANT**: Re-ejecutar el MISMO test de la tarea 2 — NO escribir un test nuevo
+    - Ejecutar `tests/test_property_image_placeholder_bugfix.py`
+    - **EXPECTED OUTCOME**: Test PASA (confirma que los placeholders existen)
+    - _Requirements: 2.6, 2.9_
+
+  - [x] 5.3 Verificar flujo completo de imagen en creación
+    - Verificar que el router `backend/routers/media.py` ya invoca `fetch_image()` después de crear un item
+    - Verificar que `image_path` se persiste correctamente en la DB (no queda null)
+    - Con los placeholders existiendo en disco, el flujo completo funciona: crear item → fetch_image() → fallback a default → image_path persistido → HTTP 200 al servir
+    - _Requirements: 2.7, 2.8, 2.10_
+
+  - [x] 5.4 Verificar que los tests de preservación siguen pasando
+    - **Property 2: Preservation** — Servicio de Imágenes Existentes
+    - **IMPORTANT**: Re-ejecutar los MISMOS tests de la tarea 3 — NO escribir tests nuevos
+    - Ejecutar `tests/test_property_preservation_bugfix.py`
+    - **EXPECTED OUTCOME**: Tests PASAN (confirma que no hay regresiones en imágenes)
+    - _Requirements: 3.4, 3.5, 3.6, 3.7_
+
+- [x] 6. Checkpoint — Asegurar que todos los tests pasan
+  - Ejecutar la suite completa de tests: `pytest tests/ -v`
+  - Verificar que TODOS los tests pasan, incluyendo:
+    - `tests/test_property_datetime_bugfix.py` (bug condition datetimes — ahora pasa)
+    - `tests/test_property_image_placeholder_bugfix.py` (bug condition imágenes — ahora pasa)
+    - `tests/test_property_preservation_bugfix.py` (preservación — sigue pasando)
+    - Tests existentes del proyecto (no deben romperse)
+  - Si hay fallos, investigar y resolver antes de marcar como completo
+  - Preguntar al usuario si surgen dudas
