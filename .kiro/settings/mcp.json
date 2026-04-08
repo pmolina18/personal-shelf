@@ -22,7 +22,32 @@
         "write_file",
         "create_directory",
         "create_directory",
-        "list_allowed_directories"
+        "list_allowed_directories",
+        "list_directory"
+      ]
+    },
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp",
+        "--api-key",
+        "YOUR_API_KEY_HERE"
+      ],
+      "disabled": false,
+      "autoApprove": [
+        "resolve-library-id",
+        "query-docs"
+      ]
+    },
+    "mdn-lookup": {
+      "command": "node",
+      "args": [
+        "/Users/pablomolinamata/mdn-lookup/index.js"
+      ],
+      "disabled": false,
+      "autoApprove": [
+        "mdnlookup"
       ]
     }
   }
