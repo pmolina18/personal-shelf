@@ -4,34 +4,52 @@
     class="pagination"
     aria-label="Pagination"
   >
-    <span class="pagination-info">{{ total }} item{{ total === 1 ? '' : 's' }} total</span>
-
+    <span class="pagination-info">{{ total }} item{{ total === 1 ? '' : 's' }}</span>
     <div class="pagination-controls">
       <button
+        class="pg-btn pg-btn--nav"
         :disabled="page <= 1"
         aria-label="Previous page"
         @click="$emit('update:page', page - 1)"
       >
-        ← Prev
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        ><path d="m15 18-6-6 6-6" /></svg>
       </button>
-
       <button
         v-for="p in visiblePages"
         :key="p"
-        :class="{ active: p === page }"
+        class="pg-btn"
+        :class="{ 'pg-btn--active': p === page }"
         :aria-label="`Go to page ${p}`"
         :aria-current="p === page ? 'page' : undefined"
         @click="$emit('update:page', p)"
       >
         {{ p }}
       </button>
-
       <button
+        class="pg-btn pg-btn--nav"
         :disabled="page >= pages"
         aria-label="Next page"
         @click="$emit('update:page', page + 1)"
       >
-        Next →
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        ><path d="m9 18 6-6-6-6" /></svg>
       </button>
     </div>
   </nav>
@@ -64,14 +82,15 @@ const visiblePages = computed(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 1.5rem;
+  margin-top: 2rem;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .pagination-info {
-  font-size: 0.85rem;
-  color: #666;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
 }
 
 .pagination-controls {
@@ -79,32 +98,44 @@ const visiblePages = computed(() => {
   gap: 0.25rem;
 }
 
-.pagination-controls button {
-  padding: 0.4rem 0.75rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  background: #fff;
+.pg-btn {
+  min-width: 2.1rem;
+  height: 2.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  transition: all var(--transition-fast);
 }
 
-.pagination-controls button:hover:not(:disabled) {
-  background: #f0f0f0;
+.pg-btn:hover:not(:disabled):not(.pg-btn--active) {
+  background: var(--color-surface-hover);
+  border-color: var(--color-text-muted);
 }
 
-.pagination-controls button:disabled {
-  opacity: 0.4;
+.pg-btn:disabled {
+  opacity: 0.3;
   cursor: not-allowed;
 }
 
-.pagination-controls button.active {
-  background: #4a90d9;
-  color: #fff;
-  border-color: #4a90d9;
+.pg-btn--active {
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+  border-color: var(--color-primary);
 }
 
-.pagination-controls button:focus-visible {
-  outline: 2px solid #4a90d9;
-  outline-offset: 1px;
+.pg-btn--nav {
+  color: var(--color-text-muted);
+}
+
+.pg-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 </style>

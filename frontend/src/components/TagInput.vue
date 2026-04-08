@@ -1,10 +1,8 @@
 <template>
   <div class="tag-input">
-    <label
-      class="tag-label"
-      for="tag-field"
-    >Tags</label>
+    <span class="section-label">Tags</span>
     <div
+      v-if="modelValue.length"
       class="tag-list"
       role="list"
       aria-label="Current tags"
@@ -18,11 +16,19 @@
         {{ tag }}
         <button
           type="button"
-          class="tag-remove"
+          class="tag-x"
           :aria-label="`Remove tag: ${tag}`"
           @click="removeTag(tag)"
         >
-          ×
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+          ><path d="M18 6 6 18M6 6l12 12" /></svg>
         </button>
       </span>
     </div>
@@ -37,7 +43,7 @@
       >
       <button
         type="button"
-        class="btn-add-tag"
+        class="btn-tag-add"
         :disabled="!newTag"
         @click="addTag"
       >
@@ -46,7 +52,7 @@
     </div>
     <p
       v-if="atLimit"
-      class="tag-limit-msg"
+      class="tag-limit"
       role="alert"
     >
       Maximum {{ max }} tags
@@ -86,74 +92,109 @@ function removeTag(tag) {
 
 <style scoped>
 .tag-input {
-  margin-bottom: 1rem;
+  padding: 1rem 1.15rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  margin-bottom: 0.75rem;
 }
 
-.tag-label {
+.section-label {
   display: block;
   font-weight: 600;
-  margin-bottom: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
 }
 
 .tag-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-bottom: 0.5rem;
+  gap: 0.35rem;
+  margin-bottom: 0.65rem;
 }
 
 .tag-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  background: #e8eaf6;
-  color: #3949ab;
-  padding: 0.2rem 0.6rem;
-  border-radius: 12px;
-  font-size: 0.85rem;
+  gap: 0.25rem;
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
+  padding: 0.22rem 0.55rem;
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  font-weight: 500;
 }
 
-.tag-remove {
+.tag-x {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 1rem;
-  color: #3949ab;
+  color: var(--color-primary);
   padding: 0;
-  line-height: 1;
+  line-height: 0;
+  opacity: 0.5;
+  transition: opacity var(--transition-fast);
+}
+
+.tag-x:hover {
+  opacity: 1;
 }
 
 .tag-add {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .tag-add input {
   flex: 1;
-  padding: 0.4rem 0.6rem;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 0.9rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  color: var(--color-text);
+  background: var(--color-bg-warm);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-.btn-add-tag {
-  padding: 0.4rem 0.8rem;
-  background: #4a90d9;
-  color: #fff;
+.tag-add input:focus {
+  outline: none;
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+  background: var(--color-surface);
+}
+
+.tag-add input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.btn-tag-add {
+  padding: 0.45rem 0.85rem;
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-weight: 600;
+  font-size: 0.82rem;
+  transition: background var(--transition-fast);
 }
 
-.btn-add-tag:disabled {
-  opacity: 0.5;
+.btn-tag-add:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.btn-tag-add:disabled {
+  opacity: 0.35;
   cursor: not-allowed;
 }
 
-.tag-limit-msg {
-  color: #c62828;
-  font-size: 0.85rem;
-  margin-top: 0.3rem;
+.tag-limit {
+  color: var(--color-error);
+  font-size: 0.78rem;
+  margin-top: 0.35rem;
+  font-weight: 500;
 }
 </style>

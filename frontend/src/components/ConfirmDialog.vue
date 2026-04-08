@@ -1,43 +1,45 @@
 <template>
   <Teleport to="body">
-    <div
-      v-if="open"
-      class="dialog-overlay"
-      @click.self="emit('cancel')"
-      @keydown.escape="emit('cancel')"
-    >
+    <Transition name="modal">
       <div
-        ref="dialogRef"
-        role="dialog"
-        aria-modal="true"
-        :aria-label="title"
-        class="dialog-box"
-        tabindex="-1"
+        v-if="open"
+        class="overlay"
+        @click.self="emit('cancel')"
+        @keydown.escape="emit('cancel')"
       >
-        <h2 class="dialog-title">
-          {{ title }}
-        </h2>
-        <p class="dialog-message">
-          {{ message }}
-        </p>
-        <div class="dialog-actions">
-          <button
-            type="button"
-            class="btn btn-cancel"
-            @click="emit('cancel')"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="btn btn-confirm"
-            @click="emit('confirm')"
-          >
-            Confirm
-          </button>
+        <div
+          ref="dialogRef"
+          role="dialog"
+          aria-modal="true"
+          :aria-label="title"
+          class="dialog"
+          tabindex="-1"
+        >
+          <h2 class="dialog-title">
+            {{ title }}
+          </h2>
+          <p class="dialog-message">
+            {{ message }}
+          </p>
+          <div class="dialog-actions">
+            <button
+              type="button"
+              class="btn btn--ghost"
+              @click="emit('cancel')"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="btn btn--danger"
+              @click="emit('confirm')"
+            >
+              Confirm
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </Transition>
   </Teleport>
 </template>
 
@@ -51,7 +53,6 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['confirm', 'cancel'])
-
 const dialogRef = ref(null)
 
 watch(() => props.open, async (isOpen) => {
@@ -63,64 +64,97 @@ watch(() => props.open, async (isOpen) => {
 </script>
 
 <style scoped>
-.dialog-overlay {
+.overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(26, 46, 34, 0.4);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: 1rem;
 }
 
-.dialog-box {
-  background: #fff;
-  border-radius: 8px;
-  padding: 1.5rem;
-  max-width: 420px;
-  width: 90%;
+.dialog {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  max-width: 400px;
+  width: 100%;
   outline: none;
+  box-shadow: var(--shadow-lg);
 }
 
 .dialog-title {
-  margin: 0 0 0.5rem;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 0.4rem;
 }
 
 .dialog-message {
-  margin: 0 0 1.5rem;
-  color: #555;
+  color: var(--color-text-secondary);
+  font-size: 0.87rem;
+  line-height: 1.55;
+  margin-bottom: 1.5rem;
 }
 
 .dialog-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 0.75rem;
+  gap: 0.6rem;
 }
 
 .btn {
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 1.1rem;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font-weight: 600;
+  font-size: 0.87rem;
   cursor: pointer;
+  transition: background var(--transition-fast);
 }
 
-.btn-cancel {
-  background: #e0e0e0;
-  color: #333;
+.btn--ghost {
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
 }
 
-.btn-cancel:hover {
-  background: #d0d0d0;
+.btn--ghost:hover {
+  background: var(--color-border-light);
 }
 
-.btn-confirm {
-  background: #c62828;
-  color: #fff;
+.btn--danger {
+  background: var(--color-error);
+  color: var(--color-text-inverse);
 }
 
-.btn-confirm:hover {
-  background: #b71c1c;
+.btn--danger:hover {
+  background: #c12a1f;
+}
+
+/* Transition */
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 200ms ease;
+}
+
+.modal-enter-active .dialog,
+.modal-leave-active .dialog {
+  transition: transform 200ms ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+
+.modal-enter-from .dialog {
+  transform: scale(0.96) translateY(8px);
+}
+
+.modal-leave-to .dialog {
+  transform: scale(0.96) translateY(8px);
 }
 </style>

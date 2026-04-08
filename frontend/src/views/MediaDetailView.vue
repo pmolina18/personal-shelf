@@ -1,6 +1,6 @@
 <template>
   <section
-    class="media-detail-view"
+    class="detail-view"
     aria-label="Media detail"
   >
     <router-link
@@ -8,127 +8,199 @@
       class="back-link"
       aria-label="Back to catalog"
     >
-      ← Back to catalog
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      ><path d="m15 18-6-6 6-6" /></svg>
+      Back to catalog
     </router-link>
-
-    <h1>{{ isCreate ? 'Add Media' : 'Media Detail' }}</h1>
 
     <!-- Loading -->
     <div
       v-if="!isCreate && itemLoading"
-      class="detail-loading"
+      class="state-box"
       role="status"
     >
-      Loading…
+      <div class="loader" />
+      <p>Loading…</p>
     </div>
 
-    <!-- Error on initial load -->
+    <!-- Error -->
     <div
       v-else-if="!isCreate && itemError"
-      class="detail-error"
+      class="state-box state-box--error"
       role="alert"
     >
-      {{ itemError }}
+      <p>{{ itemError }}</p>
     </div>
 
-    <!-- Create mode -->
+    <!-- Create -->
     <template v-else-if="isCreate">
-      <MediaForm @submit="onCreate" />
+      <h1 class="page-title">
+        Add Media
+      </h1>
+      <div class="card">
+        <MediaForm @submit="onCreate" />
+      </div>
       <p
         v-if="itemError"
-        class="op-error"
+        class="toast toast--error"
         role="alert"
       >
         {{ itemError }}
       </p>
     </template>
 
-    <!-- Edit / View mode -->
+    <!-- Detail / Edit -->
     <template v-else-if="currentItem">
-      <!-- Image -->
-      <div
-        v-if="currentItem.image_url"
-        class="detail-image"
-      >
-        <img
-          :src="currentItem.image_url"
-          :alt="`Cover for ${currentItem.title}`"
+      <Transition name="toast">
+        <p
+          v-if="successMsg"
+          class="toast toast--success"
+          role="status"
         >
-      </div>
-
-      <!-- Success toast -->
-      <p
-        v-if="successMsg"
-        class="op-success"
-        role="status"
-      >
-        {{ successMsg }}
-      </p>
+          ✓ {{ successMsg }}
+        </p>
+      </Transition>
       <p
         v-if="itemError"
-        class="op-error"
+        class="toast toast--error"
         role="alert"
       >
         {{ itemError }}
       </p>
 
-      <!-- Form -->
-      <MediaForm
-        :initial-data="currentItem"
-        @submit="onUpdate"
-      />
+      <div class="detail-grid">
+        <!-- Sidebar -->
+        <aside class="detail-aside">
+          <div class="cover-wrapper">
+            <img
+              :src="currentItem.image_url || placeholderUrl"
+              :alt="`Cover for ${currentItem.title}`"
+            >
+          </div>
+          <div class="aside-info">
+            <div class="info-item">
+              <span class="info-key">Status</span>
+              <span :class="['status-badge', `status-badge--${currentItem.status}`]">{{ statusLabel }}</span>
+            </div>
+            <div
+              v-if="currentItem.rating"
+              class="info-item"
+            >
+              <span class="info-key">Rating</span>
+              <span class="info-val info-val--rating">
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                ><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
+                {{ currentItem.rating }}/10
+              </span>
+            </div>
+            <div
+              v-if="currentItem.creator"
+              class="info-item"
+            >
+              <span class="info-key">Creator</span>
+              <span class="info-val">{{ currentItem.creator }}</span>
+            </div>
+            <div
+              v-if="currentItem.year"
+              class="info-item"
+            >
+              <span class="info-key">Year</span>
+              <span class="info-val">{{ currentItem.year }}</span>
+            </div>
+            <div
+              v-if="currentItem.tags && currentItem.tags.length"
+              class="info-item info-item--col"
+            >
+              <span class="info-key">Tags</span>
+              <div class="info-tags">
+                <span
+                  v-for="t in currentItem.tags"
+                  :key="t"
+                  class="tag-pill"
+                >{{ t }}</span>
+              </div>
+            </div>
+          </div>
+        </aside>
 
-      <!-- Status controls -->
-      <fieldset class="status-controls">
-        <legend>Status</legend>
-        <div
-          class="status-buttons"
-          role="group"
-          aria-label="Change status"
-        >
-          <button
-            v-for="s in statuses"
-            :key="s.value"
-            type="button"
-            class="btn-status"
-            :class="{ active: currentItem.status === s.value }"
-            :aria-pressed="currentItem.status === s.value"
-            @click="onStatusChange(s.value)"
-          >
-            {{ s.label }}
-          </button>
+        <!-- Main -->
+        <div class="detail-main">
+          <h1 class="page-title">
+            {{ currentItem.title }}
+          </h1>
+
+          <div class="card">
+            <MediaForm
+              :initial-data="currentItem"
+              @submit="onUpdate"
+            />
+          </div>
+
+          <div class="card">
+            <span class="section-label">Status</span>
+            <div
+              class="status-group"
+              role="group"
+              aria-label="Change status"
+            >
+              <button
+                v-for="s in statuses"
+                :key="s.value"
+                type="button"
+                class="status-btn"
+                :class="{ active: currentItem.status === s.value }"
+                :aria-pressed="currentItem.status === s.value"
+                @click="onStatusChange(s.value)"
+              >
+                <span class="status-btn-icon">{{ s.icon }}</span>
+                {{ s.label }}
+              </button>
+            </div>
+          </div>
+
+          <RatingInput
+            :model-value="currentItem.rating"
+            :disabled="currentItem.status === 'pending'"
+            @update:model-value="onRatingChange"
+          />
+
+          <TagInput
+            :model-value="currentItem.tags"
+            @update:model-value="onTagsChange"
+          />
+
+          <div class="danger-card">
+            <span class="section-label section-label--danger">Danger Zone</span>
+            <button
+              type="button"
+              class="btn-delete"
+              @click="showConfirm = true"
+            >
+              Delete this item
+            </button>
+          </div>
+
+          <ConfirmDialog
+            :open="showConfirm"
+            title="Delete Media Item"
+            message="Are you sure you want to delete this item? This action cannot be undone."
+            @confirm="onDelete"
+            @cancel="showConfirm = false"
+          />
         </div>
-      </fieldset>
-
-      <!-- Rating -->
-      <RatingInput
-        :model-value="currentItem.rating"
-        :disabled="currentItem.status === 'pending'"
-        @update:model-value="onRatingChange"
-      />
-
-      <!-- Tags -->
-      <TagInput
-        :model-value="currentItem.tags"
-        @update:model-value="onTagsChange"
-      />
-
-      <!-- Delete -->
-      <button
-        type="button"
-        class="btn-delete"
-        @click="showConfirm = true"
-      >
-        Delete item
-      </button>
-
-      <ConfirmDialog
-        :open="showConfirm"
-        title="Delete Media Item"
-        message="Are you sure you want to delete this item? This action cannot be undone."
-        @confirm="onDelete"
-        @cancel="showConfirm = false"
-      />
+      </div>
     </template>
   </section>
 </template>
@@ -146,26 +218,28 @@ const route = useRoute()
 const router = useRouter()
 
 const {
-  currentItem,
-  itemLoading,
-  itemError,
-  successMsg,
-  fetchItem,
-  create,
-  update,
-  remove,
-  changeStatus,
-  changeRating,
-  changeTags,
+  currentItem, itemLoading, itemError, successMsg,
+  fetchItem, create, update, remove, changeStatus, changeRating, changeTags,
 } = useMedia()
 
 const isCreate = computed(() => route.name === 'media-create')
 const showConfirm = ref(false)
 
+const statusLabels = { pending: 'Pending', in_progress: 'In Progress', completed: 'Completed' }
+const statusLabel = computed(() => statusLabels[currentItem.value?.status] || '')
+
+const placeholders = {
+  movie: 'https://placehold.co/300x450/1a2e22/4ead6b?text=🎬&font=raleway',
+  book: 'https://placehold.co/300x450/1a2e22/4ead6b?text=📖&font=raleway',
+  series: 'https://placehold.co/300x450/1a2e22/4ead6b?text=📺&font=raleway',
+}
+
+const placeholderUrl = computed(() => placeholders[currentItem.value?.media_type] || placeholders.movie)
+
 const statuses = [
-  { value: 'pending', label: 'Pending' },
-  { value: 'in_progress', label: 'In Progress' },
-  { value: 'completed', label: 'Completed' },
+  { value: 'pending', label: 'Pending', icon: '⏳' },
+  { value: 'in_progress', label: 'In Progress', icon: '▶️' },
+  { value: 'completed', label: 'Completed', icon: '✅' },
 ]
 
 async function onCreate(data) {
@@ -177,22 +251,13 @@ async function onCreate(data) {
   }
 }
 
-async function onUpdate(data) {
-  await update(route.params.id, data)
-}
-
+async function onUpdate(data) { await update(route.params.id, data) }
 async function onStatusChange(status) {
-  if (currentItem.value && currentItem.value.status === status) return
+  if (currentItem.value?.status === status) return
   await changeStatus(route.params.id, status)
 }
-
-async function onRatingChange(rating) {
-  await changeRating(route.params.id, rating)
-}
-
-async function onTagsChange(tags) {
-  await changeTags(route.params.id, tags)
-}
+async function onRatingChange(rating) { await changeRating(route.params.id, rating) }
+async function onTagsChange(tags) { await changeTags(route.params.id, tags) }
 
 async function onDelete() {
   showConfirm.value = false
@@ -205,119 +270,307 @@ async function onDelete() {
 }
 
 onMounted(() => {
-  if (!isCreate.value) {
-    fetchItem(route.params.id)
-  }
+  if (!isCreate.value) fetchItem(route.params.id)
 })
 </script>
 
 <style scoped>
-.media-detail-view {
-  max-width: 700px;
+.detail-view {
+  max-width: 960px;
   margin: 0 auto;
-  padding: 1rem;
 }
 
 .back-link {
-  display: inline-block;
-  margin-bottom: 1rem;
-  color: #4a90d9;
-  text-decoration: none;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 1.25rem;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: color var(--transition-fast);
 }
 
 .back-link:hover {
-  text-decoration: underline;
+  color: var(--color-primary);
 }
 
-.detail-loading {
-  text-align: center;
-  padding: 3rem 1rem;
-  color: #666;
+.page-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 1.25rem;
+  line-height: 1.25;
 }
 
-.detail-error {
-  text-align: center;
-  padding: 2rem 1rem;
-  color: #c62828;
-  background: #ffebee;
-  border-radius: 8px;
+/* Grid */
+.detail-grid {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 2rem;
+  align-items: start;
 }
 
-.detail-image {
+/* Aside */
+.detail-aside {
+  position: sticky;
+  top: 1.5rem;
+}
+
+.cover-wrapper {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
   margin-bottom: 1rem;
-  text-align: center;
 }
 
-.detail-image img {
-  max-width: 250px;
-  border-radius: 8px;
+.cover-wrapper img {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
 }
 
-.op-success {
-  color: #2e7d32;
-  background: #e8f5e9;
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
-  margin-bottom: 0.75rem;
+.aside-info {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  overflow: hidden;
 }
 
-.op-error {
-  color: #c62828;
-  background: #ffebee;
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
-  margin-bottom: 0.75rem;
-}
-
-.status-controls {
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 1rem;
-  margin: 1rem 0;
-}
-
-.status-controls legend {
-  font-weight: 600;
-}
-
-.status-buttons {
+.info-item {
   display: flex;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.85rem;
+  border-bottom: 1px solid var(--color-border-light);
 }
 
-.btn-status {
-  padding: 0.4rem 1rem;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  background: #fff;
-  cursor: pointer;
+.info-item:last-child {
+  border-bottom: none;
+}
+
+.info-item--col {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
+.info-key {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+
+.info-val {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.info-val--rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  color: var(--color-rating);
   font-weight: 600;
 }
 
-.btn-status.active {
-  background: #4a90d9;
-  color: #fff;
-  border-color: #4a90d9;
+.info-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
 }
 
-.btn-status:hover:not(.active) {
-  background: #f5f5f5;
+.tag-pill {
+  font-size: 0.7rem;
+  padding: 0.12rem 0.45rem;
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
+  border-radius: var(--radius-full);
+  font-weight: 500;
+}
+
+.status-badge {
+  font-size: 0.72rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+}
+
+.status-badge--pending {
+  background: var(--color-status-pending-bg);
+  color: var(--color-status-pending-text);
+}
+
+.status-badge--in_progress {
+  background: var(--color-status-in-progress-bg);
+  color: var(--color-status-in-progress-text);
+}
+
+.status-badge--completed {
+  background: var(--color-status-completed-bg);
+  color: var(--color-status-completed-text);
+}
+
+/* Cards */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.section-label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.6rem;
+}
+
+.section-label--danger {
+  color: var(--color-error);
+}
+
+/* Status buttons */
+.status-group {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.status-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.status-btn:hover:not(.active) {
+  background: var(--color-surface-hover);
+}
+
+.status-btn.active {
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+  border-color: var(--color-primary);
+}
+
+.status-btn-icon {
+  font-size: 0.85rem;
+}
+
+/* Danger */
+.danger-card {
+  background: var(--color-surface);
+  border: 1px dashed var(--color-error);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.15rem;
 }
 
 .btn-delete {
-  margin-top: 1.5rem;
-  padding: 0.5rem 1.2rem;
-  background: #c62828;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
+  padding: 0.45rem 1rem;
+  background: var(--color-error-bg);
+  color: var(--color-error);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-sm);
   font-weight: 600;
+  font-size: 0.82rem;
   cursor: pointer;
+  transition: all var(--transition-fast);
 }
 
 .btn-delete:hover {
-  background: #b71c1c;
+  background: var(--color-error);
+  color: var(--color-text-inverse);
+}
+
+/* Toasts */
+.toast {
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.75rem;
+  font-weight: 500;
+  font-size: 0.85rem;
+}
+
+.toast--success {
+  color: var(--color-success);
+  background: var(--color-success-bg);
+}
+
+.toast--error {
+  color: var(--color-error);
+  background: var(--color-error-bg);
+}
+
+.toast-enter-active, .toast-leave-active {
+  transition: opacity 200ms, transform 200ms;
+}
+.toast-enter-from, .toast-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+/* State */
+.state-box {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-light);
+  color: var(--color-text-muted);
+}
+
+.state-box--error {
+  background: var(--color-error-bg);
+  color: var(--color-error);
+}
+
+.loader {
+  width: 2rem;
+  height: 2rem;
+  border: 2.5px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-aside {
+    position: static;
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    gap: 1rem;
+  }
+
+  .cover-wrapper { margin-bottom: 0; }
+}
+
+@media (max-width: 500px) {
+  .detail-aside {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

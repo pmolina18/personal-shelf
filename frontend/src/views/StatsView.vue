@@ -3,79 +3,104 @@
     class="stats-view"
     aria-label="Catalog statistics"
   >
-    <h1>Statistics</h1>
+    <h1 class="page-title">
+      Statistics
+    </h1>
+    <p class="page-subtitle">
+      Overview of your collection
+    </p>
 
     <div
       v-if="loading"
-      class="stats-loading"
+      class="state-box"
       role="status"
     >
-      Loading…
+      <div class="loader" />
+      <p>Loading statistics…</p>
     </div>
 
     <div
       v-else-if="error"
-      class="stats-error"
+      class="state-box state-box--error"
       role="alert"
     >
-      {{ error }}
+      <p>{{ error }}</p>
     </div>
 
     <template v-else>
-      <p class="stats-total">
-        Total items: <strong>{{ totalItems }}</strong>
-      </p>
+      <!-- KPI row -->
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <span class="kpi-number">{{ totalItems }}</span>
+          <span class="kpi-label">Total Items</span>
+        </div>
+        <div
+          v-for="(count, type) in stats.by_type"
+          :key="'kpi-'+type"
+          class="kpi-card"
+        >
+          <span class="kpi-number">{{ count }}</span>
+          <span class="kpi-label">{{ formatLabel(type) }}{{ count !== 1 ? 's' : '' }}</span>
+        </div>
+      </div>
 
-      <section
-        class="stats-section"
-        aria-label="Items by type"
-      >
-        <h2>Items by Type</h2>
-        <dl class="stats-list">
-          <div
-            v-for="(count, type) in stats.by_type"
-            :key="type"
-            class="stats-row"
-          >
-            <dt>{{ formatLabel(type) }}</dt>
-            <dd>{{ count }}</dd>
+      <div class="stats-grid">
+        <!-- By Status -->
+        <div class="stats-card">
+          <h2 class="card-title">
+            By Status
+          </h2>
+          <div class="bar-chart">
+            <div
+              v-for="(count, status) in stats.by_status"
+              :key="status"
+              class="bar-row"
+            >
+              <span class="bar-label">{{ formatLabel(status) }}</span>
+              <div class="bar-track">
+                <div
+                  class="bar-fill"
+                  :class="`bar-fill--${status}`"
+                  :style="{ width: barPct(count) }"
+                />
+              </div>
+              <span class="bar-value">{{ count }}</span>
+            </div>
           </div>
-        </dl>
-      </section>
+        </div>
 
-      <section
-        class="stats-section"
-        aria-label="Items by status"
-      >
-        <h2>Items by Status</h2>
-        <dl class="stats-list">
-          <div
-            v-for="(count, status) in stats.by_status"
-            :key="status"
-            class="stats-row"
-          >
-            <dt>{{ formatLabel(status) }}</dt>
-            <dd>{{ count }}</dd>
+        <!-- Avg Rating -->
+        <div class="stats-card">
+          <h2 class="card-title">
+            Avg. Rating by Type
+          </h2>
+          <div class="rating-list">
+            <div
+              v-for="(avg, type) in stats.avg_rating_by_type"
+              :key="type"
+              class="rating-row"
+            >
+              <span class="rating-type">{{ formatLabel(type) }}</span>
+              <div
+                v-if="avg !== null"
+                class="rating-visual"
+              >
+                <div class="rating-bar-track">
+                  <div
+                    class="rating-bar-fill"
+                    :style="{ width: `${(avg / 10) * 100}%` }"
+                  />
+                </div>
+                <span class="rating-num">{{ avg.toFixed(1) }}</span>
+              </div>
+              <span
+                v-else
+                class="no-data"
+              >No ratings</span>
+            </div>
           </div>
-        </dl>
-      </section>
-
-      <section
-        class="stats-section"
-        aria-label="Average rating by type"
-      >
-        <h2>Average Rating by Type</h2>
-        <dl class="stats-list">
-          <div
-            v-for="(avg, type) in stats.avg_rating_by_type"
-            :key="type"
-            class="stats-row"
-          >
-            <dt>{{ formatLabel(type) }}</dt>
-            <dd>{{ avg !== null ? avg.toFixed(1) : 'No ratings' }}</dd>
-          </div>
-        </dl>
-      </section>
+        </div>
+      </div>
     </template>
   </section>
 </template>
@@ -93,6 +118,16 @@ const totalItems = computed(() => {
   return Object.values(stats.value.by_type).reduce((sum, n) => sum + n, 0)
 })
 
+const maxCount = computed(() => {
+  if (!stats.value) return 1
+  const all = [...Object.values(stats.value.by_type), ...Object.values(stats.value.by_status)]
+  return Math.max(...all, 1)
+})
+
+function barPct(count) {
+  return `${(count / maxCount.value) * 100}%`
+}
+
 function formatLabel(key) {
   return key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
@@ -100,79 +135,225 @@ function formatLabel(key) {
 async function fetchStats() {
   loading.value = true
   error.value = null
-  try {
-    stats.value = await getStats()
-  } catch (err) {
-    error.value = err.message || 'Failed to load statistics'
-  } finally {
-    loading.value = false
-  }
+  try { stats.value = await getStats() }
+  catch (err) { error.value = err.message || 'Failed to load statistics' }
+  finally { loading.value = false }
 }
 
-onMounted(() => {
-  fetchStats()
-})
+onMounted(() => fetchStats())
 </script>
 
 <style scoped>
 .stats-view {
-  max-width: 800px;
+  max-width: 860px;
   margin: 0 auto;
-  padding: 1rem;
 }
 
-.stats-view h1 {
+.page-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.2;
+}
+
+.page-subtitle {
+  font-size: 0.87rem;
+  color: var(--color-text-muted);
+  margin-top: 0.15rem;
+  margin-bottom: 1.75rem;
+}
+
+/* KPI */
+.kpi-row {
+  display: flex;
+  gap: 0.85rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.kpi-card {
+  flex: 1 1 120px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  padding: 1.15rem 1rem;
+  text-align: center;
+}
+
+.kpi-number {
+  display: block;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  line-height: 1;
+  margin-bottom: 0.25rem;
+}
+
+.kpi-label {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 1rem;
+}
+
+.stats-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+}
+
+.card-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text);
   margin-bottom: 1rem;
 }
 
-.stats-total {
-  margin-bottom: 1.5rem;
-  font-size: 1.1rem;
-}
-
-.stats-section {
-  margin-bottom: 2rem;
-}
-
-.stats-section h2 {
-  font-size: 1.1rem;
-  margin-bottom: 0.5rem;
-  border-bottom: 1px solid #ddd;
-  padding-bottom: 0.3rem;
-}
-
-.stats-list {
-  margin: 0;
-  padding: 0;
-}
-
-.stats-row {
+/* Bar chart */
+.bar-chart {
   display: flex;
-  justify-content: space-between;
-  padding: 0.4rem 0;
-  border-bottom: 1px solid #eee;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
-.stats-row dt {
+.bar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.bar-label {
+  width: 85px;
+  font-size: 0.82rem;
   font-weight: 500;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
 }
 
-.stats-row dd {
-  margin: 0;
-  color: #555;
+.bar-track {
+  flex: 1;
+  height: 8px;
+  background: var(--color-border-light);
+  border-radius: var(--radius-full);
+  overflow: hidden;
 }
 
-.stats-loading {
+.bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--color-primary);
+}
+
+.bar-fill--pending { background: var(--color-status-pending-text); }
+.bar-fill--in_progress { background: var(--color-status-in-progress-text); }
+.bar-fill--completed { background: var(--color-status-completed-text); }
+
+.bar-value {
+  width: 2rem;
+  text-align: right;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* Rating list */
+.rating-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.rating-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.rating-type {
+  width: 65px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.rating-visual {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rating-bar-track {
+  flex: 1;
+  height: 8px;
+  background: var(--color-border-light);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.rating-bar-fill {
+  height: 100%;
+  background: var(--color-rating);
+  border-radius: var(--radius-full);
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.rating-num {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-rating);
+  min-width: 1.8rem;
+  text-align: right;
+}
+
+.no-data {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+/* State */
+.state-box {
   text-align: center;
-  padding: 3rem 1rem;
-  color: #666;
+  padding: 4rem 2rem;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-light);
+  color: var(--color-text-muted);
 }
 
-.stats-error {
-  text-align: center;
-  padding: 2rem 1rem;
-  color: #c62828;
-  background: #ffebee;
-  border-radius: 8px;
+.state-box--error {
+  background: var(--color-error-bg);
+  color: var(--color-error);
+}
+
+.loader {
+  width: 2rem;
+  height: 2rem;
+  border: 2.5px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 500px) {
+  .stats-grid { grid-template-columns: 1fr; }
+  .kpi-row { gap: 0.5rem; }
+  .kpi-card { padding: 0.85rem 0.65rem; }
+  .kpi-number { font-size: 1.4rem; }
 }
 </style>
