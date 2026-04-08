@@ -186,3 +186,8 @@
 - Observation: All 85 tests pass (48s). The multi-workspace hook setup produces a harmless "file or directory not found: tests/" from workspaces that lack a `tests/` directory (e.g., `custom-mcps`, `custom-powers`). This is distinct from the earlier `backend/tests/` path mismatch — it's a separate workspace entirely, not a wrong path within the same project. No new failures or patterns discovered. All 15 correctness properties validated, all service/router/MCP tests green.
 - Action: When running post-task hooks in a multi-root workspace, expect "not found" errors from workspaces that don't have the target directory. These are safe to ignore (exit code 0). No config fix needed — the hook correctly runs in `personal-shelf` and the other workspace simply has no tests.
 - Confidence: high
+
+**[2026-04-08] — Git push: missing .gitignore entries for frontend**
+- Observation: The root `.gitignore` only had Python-specific entries (`__pycache__/`, `.hypothesis/`, etc.) and was missing `node_modules/` and `dist/`. When `git add -A` was run, the entire `frontend/node_modules/` (hundreds of files) and `frontend/dist/` (build artifacts) were staged and committed. Had to `git reset --soft HEAD~1`, add the entries to `.gitignore`, `git rm -r --cached` the offending directories, and recommit.
+- Action: When adding a frontend subdirectory to a Python-first project, always update the root `.gitignore` with `node_modules/` and `dist/` BEFORE the first `git add`. Check `git status --short` output length before committing — if it's suspiciously long, something is wrong.
+- Confidence: high
