@@ -145,14 +145,14 @@ Incremental implementation of the Media Tracker application: database models and
 - [x] 8. Checkpoint
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 9. Implement Vue.js frontend
-  - [ ] 9.1 Set up frontend project structure and API client
+- [x] 9. Implement Vue.js frontend
+  - [x] 9.1 Set up frontend project structure and API client
     - Create Vue.js 3 project in `frontend/` with Composition API
     - Create `frontend/src/api/media.js` with axios/fetch HTTP client wrapping all backend endpoints
     - Set up Vue Router in `frontend/src/router/index.js` with routes for catalog, detail, stats, import/export
     - _Requirements: 2.1, 2.3_
 
-  - [ ] 9.2 Implement CatalogView with MediaCard, FilterBar, and Pagination
+  - [x] 9.2 Implement CatalogView with MediaCard, FilterBar, and Pagination
     - Create `frontend/src/views/CatalogView.vue` with paginated media list
     - Create `frontend/src/components/MediaCard.vue` displaying title, media_type, status, rating, and image
     - Create `frontend/src/components/FilterBar.vue` with media_type, status, tag, and search text filters
@@ -160,7 +160,7 @@ Incremental implementation of the Media Tracker application: database models and
     - Show empty state message with "add first item" button when catalog is empty
     - _Requirements: 2.1, 2.2, 2.3, 3.1, 3.2, 3.3, 3.4, 12.4_
 
-  - [ ] 9.3 Implement MediaForm and MediaDetailView for create/edit
+  - [x] 9.3 Implement MediaForm and MediaDetailView for create/edit
     - Create `frontend/src/components/MediaForm.vue` with fields: title, media_type, year, creator, notes
     - Create `frontend/src/views/MediaDetailView.vue` for viewing and editing a media item
     - Include `frontend/src/components/TagInput.vue` for managing tags (max 10)
@@ -168,17 +168,17 @@ Incremental implementation of the Media Tracker application: database models and
     - Include `frontend/src/components/ConfirmDialog.vue` for delete confirmation
     - _Requirements: 1.1, 4.1, 5.1, 7.1, 7.3, 8.1_
 
-  - [ ] 9.4 Implement StatsView and ImportExportView
+  - [x] 9.4 Implement StatsView and ImportExportView
     - Create `frontend/src/views/StatsView.vue` displaying counts by type, by status, and average ratings
     - Create `frontend/src/views/ImportExportView.vue` with export download button and import file upload
     - _Requirements: 9.1, 9.2, 9.3, 10.2, 10.3_
 
-  - [ ] 9.5 Create useMedia composable for shared state and operations
+  - [x] 9.5 Create useMedia composable for shared state and operations
     - Create `frontend/src/composables/useMedia.js` encapsulating media CRUD, filters, pagination state, and API calls
     - Wire composable into CatalogView and MediaDetailView
     - _Requirements: 2.1, 3.1_
 
-- [ ] 10. Final checkpoint
+- [x] 10. Final checkpoint
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

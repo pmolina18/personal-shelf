@@ -156,3 +156,33 @@
 - Observation: Hypothesis generated `\x00` (null byte) as a search string in the combined filtering property test. SQLite's `LIKE` operator does not match null bytes the same way Python's `in` operator does — `'\x00' in '0'` is `False` in Python, but the SQL query returned the row because `LIKE '%\x00%'` behaves differently at the DB level. The fix was constraining the search strategy to printable Unicode categories (`L`, `N`, `P`, `Z`) which reflects realistic user input.
 - Action: When generating text for SQL search/filter tests with Hypothesis, restrict to printable characters using `st.characters(whitelist_categories=("L", "N", "P", "Z"))` instead of bare `st.text()`. Control characters and null bytes are not realistic user input and expose DB-driver-specific behavior rather than application bugs.
 - Confidence: high
+
+**[2026-04-08] — Hook debugging: ESLint config missing for Vue lint hook**
+- Observation: The `vue-lint-save.kiro.hook` runs `npx eslint --fix ${filePath}` but the frontend project has no ESLint dependency in `package.json` and no `eslint.config.js` file. ESLint v9+ (here v10.2.0) requires a flat config file (`eslint.config.js|mjs|cjs`) — the old `.eslintrc.*` format is no longer supported. The hook was already set to `"enabled": false` but the error still surfaced, suggesting it may have been temporarily enabled or triggered before the disabled state was saved.
+- Action: When adding lint hooks for a frontend stack, verify the linter is actually installed and configured before enabling the hook. Update the hook description to document the prerequisite (ESLint + config file). For ESLint v9+, always use the flat config format (`eslint.config.js`). This is consistent with the existing pattern of disabling hooks that depend on missing infrastructure.
+- Confidence: high
+
+**[2026-04-08] — Hook schema: `"enabled": false` is not a valid field**
+- Observation: The Kiro hook schema does not recognize an `"enabled"` top-level field. Setting `"enabled": false` in a `.kiro.hook` file has no effect — the hook still runs. This caused the `vue-lint-save` hook to fire on every `.vue`/`.js` save despite appearing disabled, producing ESLint errors because ESLint wasn't installed. The hook schema only supports fields: `name`, `version`, `description`, `when` (with `type`, `patterns`, `toolTypes`), and `then` (with `type`, `prompt`/`command`, `timeout`).
+- Action: To truly disable a hook, delete the `.kiro.hook` file or rename it (e.g., `.kiro.hook.disabled`). Do not rely on `"enabled": false` — it is silently ignored. When creating hooks that depend on uninstalled tools, do not create the hook file at all until the dependency is available.
+- Confidence: high
+
+**[2026-04-08] — ESLint v10 + Vue 3 flat config setup**
+- Observation: ESLint v10.2.0 installed via npm despite Node v20.4.0 being below the required `^20.19.0` (EBADENGINE warnings only, no hard failure). The flat config `eslint.config.js` for Vue 3 needs `import pluginVue from "eslint-plugin-vue"` and spreads `pluginVue.configs["flat/recommended"]`. The `vue/multi-word-component-names` rule should be turned off for typical SPA projects where single-word component names (e.g., `App.vue`, `Home.vue`) are standard. The `"type": "module"` in `package.json` enables ESM imports in the config file.
+- Action: When setting up ESLint for a Vue 3 + Vite project, install `eslint` + `eslint-plugin-vue`, create `eslint.config.js` with flat config format, and disable `vue/multi-word-component-names`. Always verify with `npx eslint <file>` before enabling the hook. Prefer fixing the dependency chain over disabling hooks.
+- Confidence: high
+
+**[2026-04-08] — Hook CWD mismatch: ESLint config not found from workspace root**
+- Observation: The `vue-lint-save` hook runs `npx eslint --fix ${filePath}` from the workspace root, but `eslint.config.js` lives inside `frontend/`. ESLint v10 searches for config starting from the current working directory upward, so it never finds `frontend/eslint.config.js`. The fix is adding `--config frontend/eslint.config.js` to the hook command, which explicitly tells ESLint where the config is regardless of CWD.
+- Action: When a hook's `runCommand` invokes a tool that relies on a config file in a subdirectory (ESLint, Prettier, etc.), always pass the explicit config path via CLI flag (`--config`, `--config-path`, etc.) rather than assuming CWD matches the config location. Hooks always run from the workspace root.
+- Confidence: high
+
+**[2026-04-08] — Task 9 execution: Vue.js frontend (5 subtasks)**
+- Observation: Existing patterns held. All 5 frontend subtasks (project scaffolding, catalog view, detail/form views, stats/import-export views, useMedia composable) were implemented via subagent delegation without issues. Manual project creation (no `npm create vue`) worked cleanly — `package.json` + `vite.config.js` + source files is sufficient. The Vite proxy config (`/api` → `localhost:8000`, `/images` → `localhost:8000`) avoids CORS issues during development. The `useMedia` composable pattern (fresh refs per call, no module-level shared state) gives each view independent state while sharing the same API abstraction. Backend tests remained green (85/85) throughout all subtasks. The `tests/` directory not found hook output is expected and harmless for frontend-only tasks (already documented).
+- Action: For Vue 3 frontend scaffolding, manually create files rather than using `npm create` — it's faster and avoids interactive prompts. Use Vite's `server.proxy` for API proxying. Extract shared state into composables that return fresh refs per invocation to avoid cross-component state leakage.
+- Confidence: high
+
+**[2026-04-08] — Task 10 final checkpoint: full suite validation**
+- Observation: All 85 tests pass (48s). The multi-workspace hook setup produces a harmless "file or directory not found: tests/" from workspaces that lack a `tests/` directory (e.g., `custom-mcps`, `custom-powers`). This is distinct from the earlier `backend/tests/` path mismatch — it's a separate workspace entirely, not a wrong path within the same project. No new failures or patterns discovered. All 15 correctness properties validated, all service/router/MCP tests green.
+- Action: When running post-task hooks in a multi-root workspace, expect "not found" errors from workspaces that don't have the target directory. These are safe to ignore (exit code 0). No config fix needed — the hook correctly runs in `personal-shelf` and the other workspace simply has no tests.
+- Confidence: high
