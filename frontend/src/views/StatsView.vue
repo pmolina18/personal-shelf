@@ -85,7 +85,7 @@ import { ref, computed, onMounted } from 'vue'
 import { getStats } from '../api/media.js'
 
 const stats = ref(null)
-const loading = ref(false)
+const loading = ref(true)
 const error = ref(null)
 
 const totalItems = computed(() => {
