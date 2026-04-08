@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from datetime import datetime, timezone
+from datetime import datetime
 
 from fastapi import HTTPException
 from sqlalchemy import func, select
@@ -190,7 +190,7 @@ class MediaService:
             else:
                 setattr(item, field, value)
 
-        item.updated_at = datetime.now(timezone.utc)
+        item.updated_at = datetime.utcnow()
         await session.commit()
         await session.refresh(item)
         return _to_response(item)
@@ -247,7 +247,7 @@ class MediaService:
             raise HTTPException(status_code=404, detail="Item not found")
 
         item.status = status
-        now = datetime.now(timezone.utc)
+        now = datetime.utcnow()
 
         if status == MediaStatus.in_progress.value and item.started_at is None:
             item.started_at = now
@@ -287,7 +287,7 @@ class MediaService:
             raise HTTPException(status_code=404, detail="Item not found")
 
         item.rating = rating
-        item.updated_at = datetime.now(timezone.utc)
+        item.updated_at = datetime.utcnow()
         await session.commit()
         await session.refresh(item)
         return _to_response(item)
@@ -321,7 +321,7 @@ class MediaService:
 
         tag_objects = await self._get_or_create_tags(session, tags)
         item.tags = tag_objects
-        item.updated_at = datetime.now(timezone.utc)
+        item.updated_at = datetime.utcnow()
         await session.commit()
         await session.refresh(item)
         return _to_response(item)
