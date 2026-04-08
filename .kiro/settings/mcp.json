@@ -1,0 +1,29 @@
+{
+  "mcpServers": {
+    "postgres": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://user:password@localhost:5432/media_tracker"
+      ],
+      "disabled": false,
+      "autoApprove": []
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/Users/pablomolinamata/Desktop/repositories/personal-shelf"
+      ],
+      "disabled": false,
+      "autoApprove": [
+        "write_file",
+        "create_directory",
+        "create_directory",
+        "list_allowed_directories"
+      ]
+    }
+  }
+}

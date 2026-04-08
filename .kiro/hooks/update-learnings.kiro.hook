@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Update Learnings on Stop",
+  "description": "Forces Kiro to update the learnings file with new observations after completing work, ensuring knowledge accumulates across sessions.",
+  "version": "1",
+  "when": {
+    "type": "agentStop"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "You MUST update .kiro/learnings.md before ending this session. Review what you just did and add any new observations using the format: **[Date] — [Task type]** with Observation, Action, and Confidence fields. If nothing new was discovered, add a brief note confirming existing patterns held. Do not add duplicates or vague entries."
+  }
+}

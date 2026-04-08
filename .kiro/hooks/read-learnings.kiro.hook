@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Read Learnings on Start",
+  "description": "Forces Kiro to read and internalize the learnings file at the start of every conversation, ensuring accumulated project knowledge is applied.",
+  "version": "1",
+  "when": {
+    "type": "promptSubmit"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Read .kiro/learnings.md in full. Summarize the current entries in 3-5 bullet points. Apply all entries under 'What Has Worked' and 'Patterns and Preferences'. Avoid all patterns listed under 'What Has Failed'. Then proceed with the user's request."
+  }
+}

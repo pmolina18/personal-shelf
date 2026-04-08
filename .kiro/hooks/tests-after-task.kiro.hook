@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Run Tests After Task",
+  "description": "Executes pytest after completing each spec task to ensure property-based tests and unit tests still pass incrementally.",
+  "version": "1",
+  "when": {
+    "type": "postTaskExecution"
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "python -m pytest tests/ -x --tb=short -q 2>&1 | tail -20",
+    "timeout": 120
+  }
+}

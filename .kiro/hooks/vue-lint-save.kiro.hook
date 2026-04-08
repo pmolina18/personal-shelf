@@ -1,0 +1,18 @@
+{
+  "enabled": false,
+  "name": "Vue Lint on Save",
+  "description": "Runs ESLint on Vue and JavaScript files when saved to catch issues during frontend development. Disabled until frontend/ directory exists.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "frontend/**/*.vue",
+      "frontend/**/*.js"
+    ]
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "npx eslint --fix ${filePath}",
+    "timeout": 60
+  }
+}
