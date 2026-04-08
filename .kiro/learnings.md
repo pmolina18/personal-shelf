@@ -191,3 +191,8 @@
 - Observation: The root `.gitignore` only had Python-specific entries (`__pycache__/`, `.hypothesis/`, etc.) and was missing `node_modules/` and `dist/`. When `git add -A` was run, the entire `frontend/node_modules/` (hundreds of files) and `frontend/dist/` (build artifacts) were staged and committed. Had to `git reset --soft HEAD~1`, add the entries to `.gitignore`, `git rm -r --cached` the offending directories, and recommit.
 - Action: When adding a frontend subdirectory to a Python-first project, always update the root `.gitignore` with `node_modules/` and `dist/` BEFORE the first `git add`. Check `git status --short` output length before committing — if it's suspiciously long, something is wrong.
 - Confidence: high
+
+**[2026-04-08] — Wiki/documentation generation**
+- Observation: Generating a comprehensive project wiki required reading ~15 files across backend (config, db, main, routers, schemas, models, migrations, MCP server, requirements.txt) and frontend (package.json, vite.config.js, router, component tree). The `readCode` tool handled most files efficiently, returning full content for small files and signatures for larger ones. The `mcp_filesystem_write_file` tool failed due to path mismatch (absolute path outside allowed directories), but `fsWrite` + `fsAppend` worked correctly with workspace-relative paths. Existing patterns held — no new technical issues discovered.
+- Action: For documentation tasks, use `readCode` for code files and `readFile` for config/text files. Always use workspace-relative paths with `fsWrite`/`fsAppend`, never absolute paths. Split large markdown files across `fsWrite` (initial) + `fsAppend` (rest) to stay within write size limits.
+- Confidence: high
