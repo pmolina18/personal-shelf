@@ -90,7 +90,7 @@
         >
           <div class="card-image">
             <img
-              :src="item.image_url || placeholderUrl(item.media_type)"
+              :src="resolveImageUrl(item.image_url) || placeholderUrl(item.media_type)"
               :alt="`Cover for ${item.title}`"
               loading="lazy"
             >
@@ -138,6 +138,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getFriendCollection } from '../api/social.js'
+import { resolveImageUrl } from '../api/media.js'
 import FilterBar from '../components/FilterBar.vue'
 import Pagination from '../components/Pagination.vue'
 

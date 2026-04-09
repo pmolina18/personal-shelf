@@ -3,7 +3,7 @@
  * Uses the native fetch API — same pattern as media.js.
  */
 
-const BASE_URL = '/api'
+const BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '')
 
 /**
  * Helper — sends a request and returns parsed JSON.

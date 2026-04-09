@@ -60,6 +60,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { resolveImageUrl } from '../api/media.js'
 
 const props = defineProps({
   item: {
@@ -81,7 +82,7 @@ const placeholders = {
 }
 
 const imageUrl = computed(() => {
-  return props.item.image_url || placeholders[props.item.media_type] || placeholders.movie
+  return resolveImageUrl(props.item.image_url) || placeholders[props.item.media_type] || placeholders.movie
 })
 </script>
 

@@ -3,7 +3,21 @@
  * Uses the native fetch API with a configurable BASE_URL.
  */
 
-const BASE_URL = '/api'
+const BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '')
+const IMAGES_BASE_URL = (import.meta.env.VITE_IMAGES_BASE_URL || '').replace(/\/+$/, '')
+
+/**
+ * Resolve an image URL from the backend.
+ * In dev, image_url is already relative ("/images/foo.jpg") and the Vite proxy handles it.
+ * In production, VITE_IMAGES_BASE_URL prefixes the path with the backend origin.
+ * @param {string|null} imageUrl - The image_url from the API response.
+ * @returns {string|null}
+ */
+export function resolveImageUrl(imageUrl) {
+  if (!imageUrl) return null
+  if (imageUrl.startsWith('http')) return imageUrl
+  return `${IMAGES_BASE_URL}${imageUrl.startsWith('/') ? imageUrl : '/' + imageUrl}`
+}
 
 /**
  * Helper — sends a request and returns parsed JSON.
@@ -99,6 +113,14 @@ export function updateTags(id, tags) {
     method: 'PUT',
     body: JSON.stringify({ tags }),
   })
+}
+
+// ── Metadata ────────────────────────────────────────────────
+
+/** Search metadata suggestions for a title and media type. */
+export function searchMetadata(title, mediaType) {
+  const params = new URLSearchParams({ title, media_type: mediaType })
+  return request(`/media/metadata-search?${params}`)
 }
 
 // ── Image ───────────────────────────────────────────────────

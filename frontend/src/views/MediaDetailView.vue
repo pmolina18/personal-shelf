@@ -81,7 +81,7 @@
         <aside class="detail-aside">
           <div class="cover-wrapper">
             <img
-              :src="currentItem.image_url || placeholderUrl"
+              :src="resolveImageUrl(currentItem.image_url) || placeholderUrl"
               :alt="`Cover for ${currentItem.title}`"
             >
           </div>
@@ -209,6 +209,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMedia } from '../composables/useMedia.js'
+import { resolveImageUrl } from '../api/media.js'
 import MediaForm from '../components/MediaForm.vue'
 import TagInput from '../components/TagInput.vue'
 import RatingInput from '../components/RatingInput.vue'
