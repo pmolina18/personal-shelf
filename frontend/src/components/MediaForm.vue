@@ -4,7 +4,10 @@
     @submit.prevent="onSubmit"
   >
     <!-- Title -->
-    <div class="field">
+    <div
+      ref="titleFieldRef"
+      class="field field--title"
+    >
       <label
         for="mf-title"
         class="field-label"
@@ -29,8 +32,34 @@
           required
           aria-required="true"
           placeholder="e.g. The Shawshank Redemption"
+          autocomplete="off"
+          :aria-expanded="showSuggestions && suggestions.length > 0"
+          aria-autocomplete="list"
+          aria-controls="mf-suggestions"
         >
       </div>
+      <ul
+        v-if="showSuggestions && suggestions.length"
+        id="mf-suggestions"
+        class="suggestions-list"
+        role="listbox"
+        aria-label="Metadata suggestions"
+      >
+        <li
+          v-for="(s, i) in suggestions"
+          :key="i"
+          role="option"
+          class="suggestions-list__item"
+          @mousedown.prevent="selectSuggestion(s)"
+        >
+          <span class="suggestions-list__title">{{ s.title }}</span>
+          <span class="suggestions-list__meta">
+            <span v-if="s.year">{{ s.year }}</span>
+            <span v-if="s.year && s.creator"> — </span>
+            <span v-if="s.creator">{{ s.creator }}</span>
+          </span>
+        </li>
+      </ul>
       <p
         v-if="errors.title"
         class="field-error"
@@ -209,7 +238,8 @@
 </template>
 
 <script setup>
-import { reactive, watch } from 'vue'
+import { reactive, ref, watch, onUnmounted } from 'vue'
+import { searchMetadata } from '../api/media.js'
 
 const props = defineProps({
   initialData: { type: Object, default: null },
@@ -226,6 +256,84 @@ const form = reactive({
 })
 
 const errors = reactive({ title: '' })
+
+const suggestions = ref([])
+const showSuggestions = ref(false)
+const titleFieldRef = ref(null)
+
+let debounceTimer = null
+
+function clearDebounce() {
+  if (debounceTimer) {
+    clearTimeout(debounceTimer)
+    debounceTimer = null
+  }
+}
+
+async function fetchSuggestions() {
+  const title = form.title.trim()
+  const mediaType = form.media_type
+  if (!title || !mediaType) {
+    suggestions.value = []
+    showSuggestions.value = false
+    return
+  }
+  try {
+    const results = await searchMetadata(title, mediaType)
+    suggestions.value = results
+    showSuggestions.value = results.length > 0
+  } catch {
+    suggestions.value = []
+    showSuggestions.value = false
+  }
+}
+
+function scheduleFetch() {
+  clearDebounce()
+  debounceTimer = setTimeout(fetchSuggestions, 500)
+}
+
+// Watch title changes — debounce 500ms
+watch(() => form.title, () => {
+  if (form.media_type) {
+    scheduleFetch()
+  }
+})
+
+// Watch media_type changes — trigger if title already has a value
+watch(() => form.media_type, () => {
+  if (form.title.trim()) {
+    scheduleFetch()
+  }
+})
+
+function selectSuggestion(s) {
+  if (s.year != null) form.year = s.year
+  if (s.creator) form.creator = s.creator
+  if (s.description) form.notes = s.description
+  suggestions.value = []
+  showSuggestions.value = false
+}
+
+// Close dropdown on click outside
+function onClickOutside(e) {
+  if (titleFieldRef.value && !titleFieldRef.value.contains(e.target)) {
+    showSuggestions.value = false
+  }
+}
+
+watch(showSuggestions, (visible) => {
+  if (visible) {
+    document.addEventListener('mousedown', onClickOutside)
+  } else {
+    document.removeEventListener('mousedown', onClickOutside)
+  }
+})
+
+onUnmounted(() => {
+  clearDebounce()
+  document.removeEventListener('mousedown', onClickOutside)
+})
 
 function populate(data) {
   if (!data) return
@@ -381,6 +489,52 @@ function onSubmit() {
   font-size: 0.78rem;
   margin: 0;
   font-weight: 500;
+}
+
+/* Suggestions dropdown */
+.field--title {
+  position: relative;
+}
+
+.suggestions-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  margin: 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  max-height: 14rem;
+  overflow-y: auto;
+}
+
+.suggestions-list__item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.suggestions-list__item:hover {
+  background: var(--color-surface-hover);
+}
+
+.suggestions-list__title {
+  font-size: 0.87rem;
+  font-weight: 400;
+  color: var(--color-text);
+}
+
+.suggestions-list__meta {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
 }
 
 /* Submit */
