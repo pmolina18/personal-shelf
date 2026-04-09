@@ -21,23 +21,6 @@
             >Personal<span class="brand-accent">Shelf</span></span>
           </Transition>
         </router-link>
-        <button
-          class="collapse-btn desktop-only"
-          aria-label="Toggle sidebar"
-          @click="collapsed = !collapsed"
-        >
-          <svg
-            :class="{ flipped: collapsed }"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          ><path d="m15 18-6-6 6-6" /></svg>
-        </button>
       </div>
 
       <nav
@@ -212,6 +195,23 @@
       </nav>
 
       <div class="sidebar-bottom">
+        <button
+          class="collapse-btn desktop-only"
+          aria-label="Toggle sidebar"
+          @click="collapsed = !collapsed"
+        >
+          <svg
+            :class="{ flipped: collapsed }"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          ><path d="m15 18-6-6 6-6" /></svg>
+        </button>
         <template v-if="isAuthenticated">
           <Transition name="fade-text">
             <div
@@ -434,7 +434,6 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; }
 .sidebar-top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 1.1rem 0.85rem;
   min-height: 3.5rem;
 }
@@ -460,18 +459,20 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; }
 .brand-accent { color: var(--color-primary); }
 
 .collapse-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem;
   background: none;
   border: none;
   color: var(--sidebar-text);
   cursor: pointer;
-  padding: 0.3rem;
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-sm);
   transition: color var(--transition-fast), background var(--transition-fast);
   flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 100%;
 }
+
 
 .collapse-btn:hover {
   color: var(--sidebar-text-active);
