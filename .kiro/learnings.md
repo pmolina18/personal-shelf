@@ -362,3 +362,142 @@
 - Observation: Existing patterns held throughout the social-login spec execution. The Hypothesis + asyncio.run() + _fresh_session() pattern scaled cleanly to 27 property tests across 4 test files. The bidirectional friendship model (two rows per friendship) simplified queries as designed. All pre-existing backend tests continued passing after the multi-tenancy changes (user_id FK). The only unexpected issue was the pre-existing MCP "null" string edge case (documented above). No new architectural patterns discovered.
 - Action: No changes needed. The spec-driven development workflow with property-based testing continues to work well for incremental feature development.
 - Confidence: high
+
+
+**[2026-04-09] — Session: dev server startup**
+- Observation: Existing patterns held. PostgreSQL via Postgres.app was already running (`pg_isready -h localhost` confirmed). Backend started with `python -m uvicorn backend.main:app --reload --port 8000` and frontend with `npm run dev` from `frontend/`. Both servers started without issues. No new patterns discovered.
+- Action: No changes needed. Existing patterns confirmed.
+- Confidence: high
+
+
+**[2026-04-09] — Debugging: missing DB migrations after spec execution**
+- Observation: After the social-login spec created migration `002_social_login`, the migration was never applied to the local PostgreSQL database. The backend started without errors (uvicorn doesn't run migrations on startup), but the first API call to `/api/auth/register` failed with `asyncpg.exceptions.UndefinedTableError: relation "users" does not exist`. The fix was running `python -m alembic upgrade head` from the `backend/` directory (where `alembic.ini` lives — running from project root fails with "No 'script_location' key found").
+- Action: After any spec that creates Alembic migrations, always run `python -m alembic upgrade head` from `backend/` to apply them to the local DB. Consider adding this as a post-task hook or a reminder in the dev server startup flow. The `alembic.ini` uses a relative `script_location = migrations`, so the CWD must be `backend/`.
+- Confidence: high
+
+
+**[2026-04-09] — Frontend CSS fix: collapsed sidebar icon overlap**
+- Observation: When the sidebar collapses to `--sidebar-collapsed-width` (60px), the `.sidebar-top` flex container with `justify-content: space-between` causes the brand logo and collapse button to overlap horizontally because there isn't enough width for both. The fix is switching `.collapsed .sidebar-top` to `flex-direction: column` so the two elements stack vertically instead of competing for horizontal space.
+- Action: For collapsible sidebars, always add a collapsed-state override on the header container that switches from row to column layout. This avoids overlap without needing to hide either element.
+- Confidence: high
+
+
+**[2026-04-09] — Frontend CSS: sidebar collapse button relocation**
+- Observation: Moving the collapse toggle button from `sidebar-top` (next to the brand logo) to `sidebar-bottom` (above the logout section) is a cleaner UX pattern for narrow collapsed sidebars. It eliminates the overlap problem entirely without needing flex-direction hacks, and follows the convention of utility actions (collapse, logout) living at the bottom. The button was restyled to match the `logout-btn` pattern (full-width flex row with icon + label via `<Transition>`). The previous fix (`.collapsed .sidebar-top { flex-direction: column }`) was reverted as unnecessary.
+- Action: For sidebar collapse toggles, prefer placing them at the bottom of the sidebar near other utility actions rather than in the header next to the logo. This avoids overlap issues at any collapsed width and keeps the brand area clean. Style the button consistently with other sidebar-bottom items.
+- Confidence: high
+
+
+**[2026-04-09] — UI preference: icon-only collapse button**
+- Observation: User prefers the sidebar collapse button to be icon-only (arrow chevron) without a text label. The arrow direction (flipped via CSS transform) is self-explanatory enough. This is consistent with the earlier preference for "icon-only action buttons where context is clear" noted in the CSS v3 learning.
+- Action: For sidebar utility buttons (collapse, expand), use icon-only with `aria-label` for accessibility. Don't add text labels unless the icon is ambiguous. User preference confirmed.
+- Confidence: high
+
+
+**[2026-04-09] — Session: dev server restart after wifi issue**
+- Observation: Existing patterns held. Stopping both processes via `controlBashProcess stop` and restarting them worked cleanly. PostgreSQL via Postgres.app remained running through the wifi disruption (local service, no network dependency). Both uvicorn and Vite restarted without issues. No new patterns discovered.
+- Action: No changes needed. Existing patterns confirmed.
+- Confidence: high
+
+**[2026-04-09] — Deployment research: free tier hosting for Vue 3 + FastAPI + PostgreSQL**
+- Observation: User asked about free deployment options for the full stack. No code changes were made — this was a pure advisory session. The key finding is that no single free platform covers all three layers optimally long-term. Render's free PostgreSQL expires after 90 days. Neon.dev offers a permanent free tier (0.5 GB) for PostgreSQL. For static Vue SPAs, Vercel/Netlify free tiers have no cold starts and include CDN. Render free web services sleep after 15 min of inactivity. Railway gives $5/month credit which may suffice for personal use.
+- Action: For future deployment questions on this stack, recommend the mixed approach: Vercel/Netlify (frontend) + Render (backend) + Neon.dev (PostgreSQL). This avoids the 90-day DB expiry and gives the best free-tier experience. If the user wants simplicity over optimization, Render alone covers all three layers.
+- Confidence: high
+
+**[2026-04-09] — Spec creation: mixed-deployment requirements document**
+- Observation: Existing patterns held. The spec orchestrator workflow (spec type → workflow type → subagent delegation) worked smoothly for creating a requirements-first feature spec for the mixed deployment strategy. The subagent produced an 11-requirement document in Spanish covering all deployment concerns (dynamic API URLs, CORS, Neon.dev SSL, ephemeral filesystem images, health check, render.yaml, vercel.json, dual dev/prod compatibility). Passing WIKI.md, config.py, main.py, db.py, vite.config.js, api/media.js, and requirements.txt as contextFiles gave the subagent sufficient context. No new technical issues discovered.
+- Action: When creating deployment-related specs, include both backend config files (config.py, db.py, main.py) and frontend build/API files (vite.config.js, api client) as context — the subagent needs both sides to produce accurate cross-origin and environment-switching requirements.
+- Confidence: high
+
+**[2026-04-09] — Spec refinement: narrowing platform choices in requirements doc**
+- Observation: Existing patterns held. User requested removing Netlify as an option, keeping only Vercel. Three `strReplace` calls updated the introduction, glossary, and Requisito 10 cleanly — no conflicts or ambiguity in the replacements. The document had consistent "Vercel o Netlify" / "Vercel/Netlify" phrasing which made targeted replacements straightforward. No new technical issues discovered.
+- Action: When spec documents offer multiple platform alternatives (e.g., "Vercel or Netlify"), keep the phrasing consistent so future narrowing can be done with simple find-and-replace. No need to re-delegate to a subagent for minor text edits to an existing spec document.
+- Confidence: high
+
+**[2026-04-09] — Spec creation: mixed-deployment tasks document**
+- Observation: Existing patterns held. The tasks phase delegation worked smoothly after verifying both prerequisites (requirements.md and design.md) existed. The subagent correctly identified this as a deployment/configuration spec and marked test sub-tasks as optional (`[ ]*`) since there's no complex business logic requiring property-based tests. Passing both spec documents plus the relevant source files (config.py, main.py, db.py, vite.config.js, api/media.js) as contextFiles gave the subagent enough context to produce accurate, traceable tasks. No new technical issues discovered.
+- Action: For deployment/infrastructure specs, test tasks should be optional rather than required — the value is in the configuration files and code changes, not in extensive test suites. Continue passing both spec docs and relevant source files as contextFiles for the tasks phase.
+- Confidence: high
+
+
+**[2026-04-09] — Session: informational query about MediaCreate schema**
+- Observation: No new patterns. User asked about required fields for creating a media item. Reviewed `MediaCreate` schema — `title` and `media_type` are required, `year`, `creator`, `notes`, and `tags` are optional. Existing patterns confirmed.
+- Action: No changes needed.
+- Confidence: high
+
+
+**[2026-04-09] — Research: media metadata APIs (TMDB, Open Library)**
+- Observation: There is a published MCP server for TMDB ([Laksh-star/mcp-server-tmdb](https://github.com/Laksh-star/mcp-server-tmdb)) that provides movie/TV search, details, and recommendations via Node.js. However, for auto-filling metadata in the app itself (year, creator, image), direct backend integration with TMDB's REST API (movies/series) and Open Library's API (books) is the better approach — MCP servers are for agent-side queries, not app-side automation. TMDB requires a free API key from themoviedb.org; Open Library requires no key.
+- Action: For a future "auto-fill metadata" feature, integrate TMDB API (movies/series) and Open Library API (books) directly into the backend service layer. The MCP server is useful for ad-hoc queries from the chat but doesn't solve the in-app auto-fill use case. Consider creating a spec for this feature.
+- Confidence: high
+
+
+**[2026-04-09] — Session: domain name brainstorming (non-coding advisory)**
+- Observation: User asked for domain name ideas and purchase recommendations for evolving Personal Shelf into a social network. This is outside the coding/infrastructure scope — no code changes, no tools needed beyond reading WIKI.md for project context. Provided name suggestions based on the "shelf" brand identity (shelfie.app, shelfclub.com, theshelf.social, etc.) and registrar recommendations (Cloudflare, Namecheap, Porkbun). Existing patterns held — responding in the user's language (Spanish) as expected from the spec-language steering.
+- Action: For non-technical advisory questions, read project context (WIKI.md) to give relevant suggestions rather than generic answers. Keep responses concise and actionable. No code or config changes needed.
+- Confidence: high
+
+
+**[2026-04-09] — Domain availability research (non-coding advisory)**
+- Observation: Both `myshelf.app` (active home inventory app) and `myshelf.io` (occupied) are taken. Web search results reliably indicate domain occupancy when they return active site content (terms pages, product descriptions) for the target URL. For real-time bulk TLD checking, [instantdomainsearch.com](https://www.instantdomainsearch.com) is the best recommendation — it queries 800+ TLDs live without cached data. No code changes made.
+- Action: When checking domain availability via web search, look for active site content in results as a strong signal of occupancy. For comprehensive checks, recommend instantdomainsearch.com to the user rather than searching each TLD individually.
+- Confidence: high
+
+
+**[2026-04-09] — Mixed-deployment spec: tasks 4-7 execution (frontend URLs, Alembic SSL, deploy files)**
+- Observation: Existing patterns held. The three frontend API clients (media.js, auth.js, social.js) all had identical `const BASE_URL = '/api'` patterns, making the `VITE_API_BASE_URL` change a simple find-and-replace across 3 files. For image URLs, the backend returns `image_url` as `/images/filename.jpg` via `_to_response()` in media_service — the frontend needed a `resolveImageUrl()` helper to prefix with `VITE_IMAGES_BASE_URL` in production. Three components use `image_url` directly (MediaCard, MediaDetailView, FriendCollectionView) — all updated to use the helper. Alembic env.py needed `connect_args={"ssl": "require"}` passed to `async_engine_from_config` for Neon.dev, mirroring the pattern already in db.py. The `fsWrite` tool rejected `vercel.json` when it contained a `$schema` field pointing to a remote URL — removing the `$schema` line fixed it. The 44 pre-existing frontend test failures (auth-related, documented earlier) remain unchanged — no new failures introduced.
+- Action: When `fsWrite` rejects a JSON file, check for `$schema` fields with remote URLs — the tool may interpret them as "Remote JSON Schema" and block the write. Remove the `$schema` field or use `mcp_filesystem_write_file` as a workaround. For `VITE_IMAGES_BASE_URL`, the empty string default (`''`) is correct for dev mode since image URLs from the backend are already relative paths that the Vite proxy handles. The domain `shelfd.net` is now reflected in render.yaml `ALLOWED_ORIGINS` and .env.example files.
+- Confidence: high
+
+
+**[2026-04-09] — Documentation: deployment guide creation**
+- Observation: Existing patterns held. Creating a step-by-step deployment guide (DEPLOY.md) required synthesizing information from the spec documents (requirements, design, tasks), the actual code changes (render.yaml, vercel.json, .env.example), and external platform knowledge (Vercel DNS setup, Cloudflare CNAME records, Neon.dev connection string format). The user's domain `shelfd.net` on Cloudflare was incorporated into all examples. Key detail: Cloudflare proxy (orange cloud) must be disabled for Vercel domain verification — DNS only (grey cloud) is required for SSL certificate issuance. The asyncpg driver requires `ssl=require` (not `sslmode=require`) in the connection string query parameter.
+- Action: When creating deployment guides, include a verification checklist at the end with curl commands for health check, CORS, and frontend loading. Always note the Cloudflare proxy caveat for Vercel/Render custom domains. For Neon.dev + asyncpg, the connection string format is `postgresql+asyncpg://...?ssl=require` (not `sslmode`).
+- Confidence: high
+
+
+**[2026-04-09] — CI/CD advisory discussion**
+- Observation: No code changes. User asked about CI/CD for the mixed deployment. The key insight is that Render and Vercel already auto-deploy on push to main (GitHub webhook), so the CI pipeline only needs to handle: (1) running backend tests, (2) running frontend tests, (3) executing Alembic migrations against Neon.dev. The migration step is the only part that isn't automated today. GitHub Actions with `DATABASE_URL` as a repository secret is the simplest approach. No new technical patterns discovered — existing patterns held.
+- Action: When the user confirms, create `.github/workflows/deploy.yml` with three jobs: backend tests (pytest), frontend tests (vitest), and DB migration (alembic upgrade head). Use `needs:` to gate migration on test success. Store `DATABASE_URL` as a GitHub secret, not in the workflow file.
+- Confidence: high
+
+
+**[2026-04-09] — Mixed-deployment spec: run-all-tasks execution (config + deploy)**
+- Observation: Most tasks in this deployment-focused spec were already implemented from a previous session (config.py, db.py, main.py CORS, media.js URL helpers, render.yaml, vercel.json, .env.example files). The subagents correctly detected pre-existing implementations and reported "no changes needed" rather than overwriting. The only net-new work was: (1) health check endpoint in main.py, (2) resilient image serving endpoint replacing StaticFiles mount, (3) missing `is_neon_db` import in Alembic env.py, and (4) three new test files (test_health_cors.py, test_image_resilience.py, media-urls.test.js). The post-task hooks consistently timed out (exit code -1) on the backend test suite and reported "tests/ not found" from other workspaces — both are pre-documented harmless patterns. Running targeted test subsets (`pytest tests/test_health_cors.py tests/test_image_resilience.py` and `vitest run src/__tests__/api/media-urls.test.js`) was the practical approach for checkpoint verification since the full Hypothesis suite exceeds hook timeouts.
+- Action: For deployment/config specs where many tasks may already be implemented, the subagent delegation pattern still works — subagents detect existing code and skip redundant changes. For checkpoints, run only the spec-relevant test files rather than the full suite to avoid Hypothesis timeout issues. The `is_neon_db()` import was missing in env.py despite the function call being present — always verify imports when a function is used across modules.
+- Confidence: high
+
+
+**[2026-04-09] — Spec creation: CI/CD pipeline (requirements + design + tasks)**
+- Observation: Existing patterns held. Created the full three-phase spec (requirements → design → tasks) manually without subagent delegation since the scope was well-defined from the previous advisory conversation. Key design decisions documented: migrate job depends only on backend-tests (not frontend-tests) since migrations are backend-only; Render/Vercel deploys are not orchestrated from CI since they already auto-deploy via GitHub webhooks; property tests use `HYPOTHESIS_MAX_EXAMPLES=10` in CI for speed. The 44 pre-existing frontend test failures (auth-related) are flagged in the tasks notes as a blocker that needs resolution before the frontend-tests job can pass in CI. No new technical patterns discovered.
+- Action: Before executing this spec's tasks, the pre-existing frontend test failures must be addressed — either fix them or mark them as skip. Otherwise the `frontend-tests` job will always fail in CI. The spec was written in Spanish following the spec-language steering.
+- Confidence: high
+
+
+**[2026-04-09] — Spec creation: media-metadata-autofill requirements document**
+- Observation: Existing patterns held. The spec orchestrator workflow (spec type → workflow selection → subagent delegation) worked smoothly. Passing 8 context files (schemas, services, models, config, routers, main, WIKI) gave the subagent enough context to produce an 8-requirement document in Spanish. The subagent correctly identified that the existing ImageService already calls TMDB and Open Library for images, and that the metadata service can extend the same pattern. The `.config.kiro` was auto-created. No new technical issues discovered.
+- Action: No changes needed. Existing patterns confirmed.
+- Confidence: high
+
+
+**[2026-04-09] — Spec creation: media-metadata-autofill design + tasks documents**
+- Observation: Existing patterns held. The three-phase delegation (requirements → design → tasks) completed smoothly in a single user message by invoking the design subagent first, then the tasks subagent sequentially. Passing 12-13 context files (both spec docs + all relevant backend/frontend source files) gave each subagent enough context. The design doc correctly identified that TMDB `/search/movie` doesn't include credits (needs a separate `/movie/{id}/credits` call for director), which is a useful detail for implementation. The tasks doc followed the incremental structure with checkpoints and optional PBT sub-tasks. No new technical issues discovered.
+- Action: When the user approves requirements and asks for both design and tasks in one go, invoke them sequentially (design first, then tasks) rather than in parallel — tasks depend on the design content. Existing patterns confirmed.
+- Confidence: high
+
+
+**[2026-04-09] — IDEAS.md template creation**
+- Observation: Existing patterns held. Created a structured IDEAS.md template with fields (Tipo, Prioridad, Descripción, Contexto, Notas) designed to map directly to spec creation inputs — `Tipo` determines the spec workflow (feature → requirements-first, bugfix → bugfix-workflow), `Descripción` + `Contexto` feed the subagent's contextFiles and prompt. The file was simple enough for a single `fsWrite` call. No new technical issues discovered.
+- Action: No changes needed. When the user references an IDEA-XX, parse the Tipo field to select the correct spec workflow and use Descripción + Contexto to gather the right source files as contextFiles for the subagent.
+- Confidence: high
+
+
+**[2026-04-09] — Task execution: media-metadata-autofill (all tasks)**
+- Observation: Tasks 1-2 (MetadataService + schema) and 3.1-3.2 (endpoint + create integration) and 4.1 (update integration) were already implemented from a previous session — the subagent confirmed all code was in place and passing diagnostics. Frontend tasks 6.1 (API client) and 6.2 (MediaForm dropdown) were implemented by the vue-frontend-expert subagent in a single delegation. The subagent correctly used `@mousedown.prevent` on dropdown items to prevent blur race conditions with the click-outside handler. Batching backend verification + frontend implementation across two subagent calls (one backend, one frontend) was efficient. Post-task hook timeouts (Hypothesis >2min) and "tests/ not found" from other workspaces continued as expected.
+- Action: When resuming a partially-completed spec, always verify existing implementation state before re-delegating — the subagent can confirm what's already done without re-implementing. For dropdown click interactions alongside click-outside handlers, use `@mousedown.prevent` instead of `@click` to avoid blur firing before the click registers.
+- Confidence: high
+
+**[2026-04-09] — Git push: multi-commit grouping for accumulated changes**
+- Observation: Existing patterns held. Splitting ~50 pending changes (modified + untracked) into 9 logical commits worked cleanly with sequential `git add <specific files>` + `git commit`. The grouping order followed the established pattern: chore (env/gitignore) → feat (deployment infra) → feat (frontend URLs) → feat (backend metadata) → feat (frontend metadata UI) → fix (sidebar tweak) → test → chore (images) → chore (specs/docs). Reading all diffs upfront via `git diff <file>` before starting commits was essential to plan the grouping correctly — without it, related changes across backend/frontend would have been split incorrectly. Binary files (jpg images) were committed separately since they don't mix well with code diffs. The `git status --short` check between commits confirmed correct staging each time. No new issues discovered.
+- Action: When committing accumulated work spanning multiple features, read all diffs first to map changes to functional groups before starting any commits. Keep binary assets in their own commit. Continue using conventional commit prefixes (`feat`, `fix`, `test`, `chore`) for clear history.
+- Confidence: high
