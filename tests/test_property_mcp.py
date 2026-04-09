@@ -18,9 +18,12 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+import sqlalchemy as sa
+
 import backend.mcp.server as mcp_module
 from backend.mcp.server import mcp_server
 from backend.models.media import Base
+from backend.models.user import User  # noqa: F401 — registers users table
 
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 
@@ -40,6 +43,13 @@ async def _with_fresh_db(coro_fn):
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    async with engine.begin() as conn:
+        await conn.execute(
+            sa.text(
+                "INSERT INTO users (id, email, username, password_hash) "
+                "VALUES (1, 'test@test.com', 'testuser', 'fakehash')"
+            )
+        )
     try:
         await coro_fn()
     finally:
@@ -53,13 +63,15 @@ async def _with_fresh_db(coro_fn):
 valid_media_types = st.sampled_from(["movie", "book", "series"])
 valid_titles = st.text(min_size=1, max_size=100).filter(lambda t: t.strip())
 
+_safe_text = st.text(min_size=1, max_size=100).filter(lambda s: s.lower() != "null")
+
 valid_media_create_args = st.fixed_dictionaries(
     {"title": valid_titles, "media_type": valid_media_types},
     optional={
         "year": st.integers(min_value=1800, max_value=2100),
-        "creator": st.text(min_size=1, max_size=100),
-        "notes": st.text(max_size=200),
-        "tags": st.lists(st.text(min_size=1, max_size=50), max_size=5, unique=True),
+        "creator": _safe_text,
+        "notes": st.text(max_size=200).filter(lambda s: s.lower() != "null"),
+        "tags": st.lists(st.text(min_size=1, max_size=50).filter(lambda s: s.lower() != "null"), max_size=5, unique=True),
     },
 )
 

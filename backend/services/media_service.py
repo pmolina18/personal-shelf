@@ -53,17 +53,21 @@ class MediaService:
     All methods receive an AsyncSession and operate within it.
     """
 
-    async def create(self, session: AsyncSession, data: MediaCreate) -> MediaResponse:
+    async def create(
+        self, session: AsyncSession, data: MediaCreate, user_id: int
+    ) -> MediaResponse:
         """Create a new media item with status 'pending'.
 
         Args:
             session: The async database session.
             data: Validated creation payload.
+            user_id: ID of the owning user.
 
         Returns:
             The created media item as a response schema.
         """
         item = MediaItem(
+            user_id=user_id,
             title=data.title,
             media_type=data.media_type.value,
             status=MediaStatus.pending.value,
@@ -84,22 +88,27 @@ class MediaService:
         await session.refresh(item)
         return _to_response(item)
 
-    async def get(self, session: AsyncSession, media_id: int) -> MediaResponse:
+    async def get(
+        self, session: AsyncSession, media_id: int, user_id: int
+    ) -> MediaResponse:
         """Fetch a single media item by ID.
 
         Args:
             session: The async database session.
             media_id: The item's primary key.
+            user_id: ID of the authenticated user.
 
         Returns:
             The media item as a response schema.
 
         Raises:
-            HTTPException: 404 if the item does not exist.
+            HTTPException: 404 if the item does not exist, 403 if not owner.
         """
         item = await session.get(MediaItem, media_id)
         if item is None:
             raise HTTPException(status_code=404, detail="Item not found")
+        if item.user_id != user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
         return _to_response(item)
 
     async def list(
@@ -108,6 +117,7 @@ class MediaService:
         filters: MediaFilters,
         page: int = 1,
         size: int = 20,
+        user_id: int = 1,
     ) -> PaginatedResult:
         """Return a paginated, filtered list of media items.
 
@@ -118,11 +128,12 @@ class MediaService:
             filters: Optional filters (media_type, status, search, tag).
             page: Page number (1-indexed).
             size: Items per page.
+            user_id: Owner user ID to filter items by.
 
         Returns:
             A PaginatedResult with items, total count, and page metadata.
         """
-        query = select(MediaItem)
+        query = select(MediaItem).where(MediaItem.user_id == user_id)
 
         if filters.media_type is not None:
             query = query.where(MediaItem.media_type == filters.media_type.value)
@@ -159,7 +170,7 @@ class MediaService:
         )
 
     async def update(
-        self, session: AsyncSession, media_id: int, data: MediaUpdate
+        self, session: AsyncSession, media_id: int, data: MediaUpdate, user_id: int = 1
     ) -> MediaResponse:
         """Partially update an existing media item.
 
@@ -169,16 +180,19 @@ class MediaService:
             session: The async database session.
             media_id: The item's primary key.
             data: Validated update payload with optional fields.
+            user_id: Owner user ID — verifies ownership.
 
         Returns:
             The updated media item as a response schema.
 
         Raises:
-            HTTPException: 404 if the item does not exist.
+            HTTPException: 404 if the item does not exist, 403 if not owner.
         """
         item = await session.get(MediaItem, media_id)
         if item is None:
             raise HTTPException(status_code=404, detail="Item not found")
+        if item.user_id != user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
 
         update_data = data.model_dump(exclude_unset=True)
         for field, value in update_data.items():
@@ -195,19 +209,24 @@ class MediaService:
         await session.refresh(item)
         return _to_response(item)
 
-    async def delete(self, session: AsyncSession, media_id: int) -> None:
+    async def delete(
+        self, session: AsyncSession, media_id: int, user_id: int = 1
+    ) -> None:
         """Delete a media item by ID.
 
         Args:
             session: The async database session.
             media_id: The item's primary key.
+            user_id: Owner user ID — verifies ownership.
 
         Raises:
-            HTTPException: 404 if the item does not exist.
+            HTTPException: 404 if the item does not exist, 403 if not owner.
         """
         item = await session.get(MediaItem, media_id)
         if item is None:
             raise HTTPException(status_code=404, detail="Item not found")
+        if item.user_id != user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
         await session.delete(item)
         await session.commit()
 
@@ -216,7 +235,7 @@ class MediaService:
     # ------------------------------------------------------------------
 
     async def update_status(
-        self, session: AsyncSession, media_id: int, status: str
+        self, session: AsyncSession, media_id: int, status: str, user_id: int = 1
     ) -> MediaResponse:
         """Update the consumption status of a media item.
 
@@ -228,12 +247,13 @@ class MediaService:
             session: The async database session.
             media_id: The item's primary key.
             status: The new status string.
+            user_id: Owner user ID — verifies ownership.
 
         Returns:
             The updated media item.
 
         Raises:
-            HTTPException: 400 for invalid status, 404 if not found.
+            HTTPException: 400 for invalid status, 404 if not found, 403 if not owner.
         """
         valid = {s.value for s in MediaStatus}
         if status not in valid:
@@ -245,6 +265,8 @@ class MediaService:
         item = await session.get(MediaItem, media_id)
         if item is None:
             raise HTTPException(status_code=404, detail="Item not found")
+        if item.user_id != user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
 
         item.status = status
         now = datetime.utcnow()
@@ -261,7 +283,7 @@ class MediaService:
         return _to_response(item)
 
     async def update_rating(
-        self, session: AsyncSession, media_id: int, rating: int
+        self, session: AsyncSession, media_id: int, rating: int, user_id: int = 1
     ) -> MediaResponse:
         """Assign a rating (1-10) to a media item.
 
@@ -269,12 +291,13 @@ class MediaService:
             session: The async database session.
             media_id: The item's primary key.
             rating: Integer rating between 1 and 10.
+            user_id: Owner user ID — verifies ownership.
 
         Returns:
             The updated media item.
 
         Raises:
-            HTTPException: 400 for invalid rating, 404 if not found.
+            HTTPException: 400 for invalid rating, 404 if not found, 403 if not owner.
         """
         if not isinstance(rating, int) or rating < 1 or rating > 10:
             raise HTTPException(
@@ -285,6 +308,8 @@ class MediaService:
         item = await session.get(MediaItem, media_id)
         if item is None:
             raise HTTPException(status_code=404, detail="Item not found")
+        if item.user_id != user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
 
         item.rating = rating
         item.updated_at = datetime.utcnow()
@@ -293,7 +318,7 @@ class MediaService:
         return _to_response(item)
 
     async def update_tags(
-        self, session: AsyncSession, media_id: int, tags: list[str]
+        self, session: AsyncSession, media_id: int, tags: list[str], user_id: int = 1
     ) -> MediaResponse:
         """Replace the tags of a media item.
 
@@ -303,12 +328,13 @@ class MediaService:
             session: The async database session.
             media_id: The item's primary key.
             tags: List of tag name strings (max 10).
+            user_id: Owner user ID — verifies ownership.
 
         Returns:
             The updated media item.
 
         Raises:
-            HTTPException: 400 if more than 10 tags, 404 if not found.
+            HTTPException: 400 if more than 10 tags, 404 if not found, 403 if not owner.
         """
         if len(tags) > 10:
             raise HTTPException(
@@ -318,6 +344,8 @@ class MediaService:
         item = await session.get(MediaItem, media_id)
         if item is None:
             raise HTTPException(status_code=404, detail="Item not found")
+        if item.user_id != user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
 
         tag_objects = await self._get_or_create_tags(session, tags)
         item.tags = tag_objects

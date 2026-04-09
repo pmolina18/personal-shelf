@@ -5,7 +5,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from backend.config import IMAGE_STORAGE_PATH
+from backend.routers.auth import router as auth_router
 from backend.routers.export_import import router as export_import_router
+from backend.routers.feed import router as feed_router
+from backend.routers.friends import router as friends_router
 from backend.routers.media import router as media_router
 from backend.routers.stats import router as stats_router
 
@@ -21,9 +24,12 @@ app.add_middleware(
 )
 
 # Register API routers
+app.include_router(auth_router)
 app.include_router(media_router)
 app.include_router(stats_router)
 app.include_router(export_import_router)
+app.include_router(friends_router)
+app.include_router(feed_router)
 
 # Serve stored images as static files (must be AFTER routers — mounts are catch-all)
 app.mount("/images", StaticFiles(directory=str(IMAGE_STORAGE_PATH)), name="images")

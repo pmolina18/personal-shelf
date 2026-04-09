@@ -1,9 +1,13 @@
 """Export and import router — catalog JSON serialization endpoints."""
 
+from __future__ import annotations
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.db import get_session
+from backend.dependencies import get_current_user
+from backend.models.user import User
 from backend.schemas.media import ImportResult
 from backend.services.export_service import ExportService
 
@@ -15,30 +19,17 @@ _export_service = ExportService()
 @router.get("/export")
 async def export_catalog(
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
 ) -> dict:
-    """Export the entire catalog as JSON.
-
-    Args:
-        session: Async database session.
-
-    Returns:
-        A JSON-serializable dict with version, timestamp, and all items.
-    """
-    return await _export_service.export_catalog(session)
+    """Export the authenticated user's catalog as JSON."""
+    return await _export_service.export_catalog(session, user_id=user.id)
 
 
 @router.post("/import", response_model=ImportResult)
 async def import_catalog(
     data: dict,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
 ) -> ImportResult:
-    """Import media items from a JSON payload.
-
-    Args:
-        data: A dict matching the ExportData schema.
-        session: Async database session.
-
-    Returns:
-        An ImportResult with the count of created items and any errors.
-    """
-    return await _export_service.import_catalog(session, data)
+    """Import media items from a JSON payload for the authenticated user."""
+    return await _export_service.import_catalog(session, data, user_id=user.id)

@@ -70,7 +70,7 @@ async def create_media(
 
     try:
         async with async_session() as session:
-            result = await _media_service.create(session, data)
+            result = await _media_service.create(session, data, user_id=1)
             return result.model_dump(mode="json")
     except Exception as exc:
         return _format_error(exc)
@@ -91,7 +91,7 @@ async def delete_media(media_id: int) -> dict:
     """
     try:
         async with async_session() as session:
-            await _media_service.delete(session, media_id)
+            await _media_service.delete(session, media_id, user_id=1)
             return {"message": f"Media item {media_id} deleted successfully"}
     except Exception as exc:
         return _format_error(exc)
@@ -143,7 +143,7 @@ async def update_media(
 
     try:
         async with async_session() as session:
-            result = await _media_service.update(session, media_id, data)
+            result = await _media_service.update(session, media_id, data, user_id=1)
             return result.model_dump(mode="json")
     except Exception as exc:
         return _format_error(exc)
@@ -185,7 +185,7 @@ async def list_media(
 
     try:
         async with async_session() as session:
-            result = await _media_service.list(session, filters, page, size)
+            result = await _media_service.list(session, filters, page, size, user_id=1)
             return result.model_dump(mode="json")
     except Exception as exc:
         return _format_error(exc)
@@ -209,7 +209,7 @@ async def update_status(media_id: int, status: str) -> dict:
     """
     try:
         async with async_session() as session:
-            result = await _media_service.update_status(session, media_id, status)
+            result = await _media_service.update_status(session, media_id, status, user_id=1)
             return result.model_dump(mode="json")
     except Exception as exc:
         return _format_error(exc)
@@ -231,7 +231,7 @@ async def rate_media(media_id: int, rating: int) -> dict:
     """
     try:
         async with async_session() as session:
-            result = await _media_service.update_rating(session, media_id, rating)
+            result = await _media_service.update_rating(session, media_id, rating, user_id=1)
             return result.model_dump(mode="json")
     except Exception as exc:
         return _format_error(exc)
@@ -255,7 +255,7 @@ async def manage_tags(media_id: int, tags: list[str]) -> dict:
     """
     try:
         async with async_session() as session:
-            result = await _media_service.update_tags(session, media_id, tags)
+            result = await _media_service.update_tags(session, media_id, tags, user_id=1)
             return result.model_dump(mode="json")
     except Exception as exc:
         return _format_error(exc)
@@ -274,7 +274,7 @@ async def get_stats() -> dict:
     """
     try:
         async with async_session() as session:
-            result = await _stats_service.get_stats(session)
+            result = await _stats_service.get_stats(session, user_id=1)
             return result.model_dump(mode="json")
     except Exception as exc:
         return _format_error(exc)
@@ -293,7 +293,7 @@ async def export_catalog() -> dict:
     """
     try:
         async with async_session() as session:
-            return await _export_service.export_catalog(session)
+            return await _export_service.export_catalog(session, user_id=1)
     except Exception as exc:
         return _format_error(exc)
 
@@ -314,7 +314,7 @@ async def import_catalog(data: dict) -> dict:
     """
     try:
         async with async_session() as session:
-            result = await _export_service.import_catalog(session, data)
+            result = await _export_service.import_catalog(session, data, user_id=1)
             return result.model_dump(mode="json")
     except Exception as exc:
         return _format_error(exc)

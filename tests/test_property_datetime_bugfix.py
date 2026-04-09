@@ -30,7 +30,10 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+import sqlalchemy as sa
+
 from backend.models.media import Base
+from backend.models.user import User  # noqa: F401 — registers users table
 from backend.schemas.media import MediaCreate, MediaType
 from backend.services.media_service import MediaService
 
@@ -60,6 +63,13 @@ async def _fresh_session():
     engine = create_async_engine(TEST_DB_URL, echo=False)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    async with engine.begin() as conn:
+        await conn.execute(
+            sa.text(
+                "INSERT INTO users (id, email, username, password_hash) "
+                "VALUES (1, 'test@test.com', 'testuser', 'fakehash')"
+            )
+        )
     factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with factory() as sess:
         yield sess
@@ -111,7 +121,7 @@ def test_update_status_produces_naive_datetimes(create_data, status):
     async def _run():
         async for sess in _fresh_session():
             svc = MediaService()
-            created = await svc.create(sess, create_data)
+            created = await svc.create(sess, create_data, user_id=1)
 
             capture = _DatetimeCapture()
             with patch(
@@ -149,7 +159,7 @@ def test_update_rating_produces_naive_datetimes(create_data, rating):
     async def _run():
         async for sess in _fresh_session():
             svc = MediaService()
-            created = await svc.create(sess, create_data)
+            created = await svc.create(sess, create_data, user_id=1)
 
             capture = _DatetimeCapture()
             with patch(
@@ -188,7 +198,7 @@ def test_update_tags_produces_naive_datetimes(create_data, tags):
     async def _run():
         async for sess in _fresh_session():
             svc = MediaService()
-            created = await svc.create(sess, create_data)
+            created = await svc.create(sess, create_data, user_id=1)
 
             capture = _DatetimeCapture()
             with patch(

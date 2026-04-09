@@ -10,7 +10,7 @@ from backend.schemas.media import MediaCreate
 @pytest.mark.asyncio
 async def test_export_empty_catalog(session, export_service):
     """Exporting an empty catalog returns version, timestamp, and empty items."""
-    result = export_service.export_catalog(session)
+    result = export_service.export_catalog(session, user_id=1)
     data = await result
 
     assert data["version"] == "1.0"
@@ -22,13 +22,13 @@ async def test_export_empty_catalog(session, export_service):
 async def test_export_includes_all_items(session, media_service, export_service):
     """Exported JSON contains every item in the catalog."""
     await media_service.create(
-        session, MediaCreate(title="Movie A", media_type="movie")
+        session, MediaCreate(title="Movie A", media_type="movie"), user_id=1
     )
     await media_service.create(
-        session, MediaCreate(title="Book B", media_type="book")
+        session, MediaCreate(title="Book B", media_type="book"), user_id=1
     )
 
-    data = await export_service.export_catalog(session)
+    data = await export_service.export_catalog(session, user_id=1)
 
     assert len(data["items"]) == 2
     titles = {item["title"] for item in data["items"]}
@@ -39,6 +39,7 @@ async def test_export_includes_all_items(session, media_service, export_service)
 async def test_export_includes_image_url(session, export_service):
     """Exported items include image_url field (Req 12.6)."""
     item = MediaItem(
+        user_id=1,
         title="With Image",
         media_type="movie",
         status="pending",
@@ -47,7 +48,7 @@ async def test_export_includes_image_url(session, export_service):
     session.add(item)
     await session.commit()
 
-    data = await export_service.export_catalog(session)
+    data = await export_service.export_catalog(session, user_id=1)
 
     assert len(data["items"]) == 1
     assert data["items"][0]["image_url"] == "/images/media/1.jpg"
@@ -59,9 +60,10 @@ async def test_export_includes_tags(session, media_service, export_service):
     await media_service.create(
         session,
         MediaCreate(title="Tagged", media_type="series", tags=["sci-fi", "drama"]),
+        user_id=1,
     )
 
-    data = await export_service.export_catalog(session)
+    data = await export_service.export_catalog(session, user_id=1)
 
     assert set(data["items"][0]["tags"]) == {"sci-fi", "drama"}
 
@@ -69,21 +71,21 @@ async def test_export_includes_tags(session, media_service, export_service):
 @pytest.mark.asyncio
 async def test_import_creates_items(session, export_service):
     """Importing valid JSON creates the corresponding items."""
-    data = await export_service.export_catalog(session)
+    data = await export_service.export_catalog(session, user_id=1)
     assert data["items"] == []
 
     # Build a payload manually
-    item = MediaItem(title="Import Me", media_type="book", status="pending")
+    item = MediaItem(title="Import Me", media_type="book", status="pending", user_id=1)
     session.add(item)
     await session.commit()
 
-    export_data = await export_service.export_catalog(session)
+    export_data = await export_service.export_catalog(session, user_id=1)
 
     # Clear the DB
     await session.delete(item)
     await session.commit()
 
-    result = await export_service.import_catalog(session, export_data)
+    result = await export_service.import_catalog(session, export_data, user_id=1)
 
     assert result.created == 1
     assert result.errors == []
@@ -101,9 +103,10 @@ async def test_import_preserves_tags(session, media_service, export_service):
     await media_service.create(
         session,
         MediaCreate(title="Tagged Item", media_type="movie", tags=["action"]),
+        user_id=1,
     )
 
-    export_data = await export_service.export_catalog(session)
+    export_data = await export_service.export_catalog(session, user_id=1)
 
     # Clear DB
     items = (await session.execute(select(MediaItem))).scalars().unique().all()
@@ -111,7 +114,7 @@ async def test_import_preserves_tags(session, media_service, export_service):
         await session.delete(i)
     await session.commit()
 
-    result = await export_service.import_catalog(session, export_data)
+    result = await export_service.import_catalog(session, export_data, user_id=1)
     assert result.created == 1
 
     rows = await session.execute(select(MediaItem))
@@ -126,7 +129,7 @@ async def test_import_invalid_format_raises_400(session, export_service):
     from fastapi import HTTPException
 
     with pytest.raises(HTTPException) as exc_info:
-        await export_service.import_catalog(session, {"bad": "data"})
+        await export_service.import_catalog(session, {"bad": "data"}, user_id=1)
 
     assert exc_info.value.status_code == 400
     assert "Invalid import format" in exc_info.value.detail
@@ -158,6 +161,6 @@ async def test_import_partial_errors(session, export_service):
         ],
     }
 
-    result = await export_service.import_catalog(session, payload)
+    result = await export_service.import_catalog(session, payload, user_id=1)
     assert result.created == 1
     assert result.errors == []

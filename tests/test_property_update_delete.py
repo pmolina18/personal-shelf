@@ -17,7 +17,10 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+import sqlalchemy as sa
+
 from backend.models.media import Base
+from backend.models.user import User  # noqa: F401 — registers users table
 from backend.schemas.media import (
     MediaCreate,
     MediaType,
@@ -73,6 +76,13 @@ async def _fresh_session():
     engine = create_async_engine(TEST_DB_URL, echo=False)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    async with engine.begin() as conn:
+        await conn.execute(
+            sa.text(
+                "INSERT INTO users (id, email, username, password_hash) "
+                "VALUES (1, 'test@test.com', 'testuser', 'fakehash')"
+            )
+        )
     factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with factory() as sess:
         yield sess
@@ -91,9 +101,9 @@ def test_update_preserves_modified_fields(create_data, update_data):
     async def _run():
         async for sess in _fresh_session():
             svc = MediaService()
-            created = await svc.create(sess, create_data)
+            created = await svc.create(sess, create_data, user_id=1)
 
-            updated = await svc.update(sess, created.id, update_data)
+            updated = await svc.update(sess, created.id, update_data, user_id=1)
             update_dict = update_data.model_dump(exclude_unset=True)
 
             # Modified fields should reflect the update
@@ -135,12 +145,12 @@ def test_deletion_removes_the_item(create_data):
     async def _run():
         async for sess in _fresh_session():
             svc = MediaService()
-            created = await svc.create(sess, create_data)
+            created = await svc.create(sess, create_data, user_id=1)
 
-            await svc.delete(sess, created.id)
+            await svc.delete(sess, created.id, user_id=1)
 
             with pytest.raises(HTTPException) as exc_info:
-                await svc.get(sess, created.id)
+                await svc.get(sess, created.id, user_id=1)
             assert exc_info.value.status_code == 404
 
     asyncio.run(_run())

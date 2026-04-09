@@ -1,11 +1,15 @@
 """Media CRUD router — handles HTTP concerns for media item endpoints."""
 
-from fastapi import APIRouter, Depends, Query
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import Response
 
 from backend.db import get_session
+from backend.dependencies import get_current_user
 from backend.models.media import MediaItem
+from backend.models.user import User
 from backend.schemas.media import (
     MediaCreate,
     MediaFilters,
@@ -31,21 +35,14 @@ _image_service = ImageService()
 async def create_media(
     data: MediaCreate,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
 ) -> MediaResponse:
     """Create a new media item.
 
     Automatically fetches a representative image after creation.
-
-    Args:
-        data: Validated creation payload.
-        session: Async database session.
-
-    Returns:
-        The created media item with a 201 status code.
     """
-    result = await _media_service.create(session, data)
+    result = await _media_service.create(session, data, user_id=user.id)
 
-    # Fetch an image for the new item and persist the path
     image_filename = await _image_service.fetch_image(
         data.title, data.media_type.value,
     )
@@ -68,45 +65,26 @@ async def list_media(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
 ) -> PaginatedResult:
-    """Return a paginated, filtered list of media items.
-
-    Args:
-        media_type: Optional media type filter.
-        status: Optional status filter.
-        search: Optional case-insensitive title search.
-        tag: Optional tag name filter.
-        page: Page number (1-indexed).
-        size: Items per page.
-        session: Async database session.
-
-    Returns:
-        Paginated result with matching media items.
-    """
+    """Return a paginated, filtered list of media items."""
     filters = MediaFilters(
         media_type=media_type,
         status=status,
         search=search,
         tag=tag,
     )
-    return await _media_service.list(session, filters, page, size)
+    return await _media_service.list(session, filters, page, size, user_id=user.id)
 
 
 @router.get("/{media_id}", response_model=MediaResponse)
 async def get_media(
     media_id: int,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
 ) -> MediaResponse:
-    """Fetch a single media item by ID.
-
-    Args:
-        media_id: The item's primary key.
-        session: Async database session.
-
-    Returns:
-        The media item.
-    """
-    return await _media_service.get(session, media_id)
+    """Fetch a single media item by ID."""
+    return await _media_service.get(session, media_id, user_id=user.id)
 
 
 @router.put("/{media_id}", response_model=MediaResponse)
@@ -114,22 +92,14 @@ async def update_media(
     media_id: int,
     data: MediaUpdate,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
 ) -> MediaResponse:
     """Update an existing media item.
 
     Triggers a new image fetch when title or media_type changes.
-
-    Args:
-        media_id: The item's primary key.
-        data: Validated update payload.
-        session: Async database session.
-
-    Returns:
-        The updated media item.
     """
-    result = await _media_service.update(session, media_id, data)
+    result = await _media_service.update(session, media_id, data, user_id=user.id)
 
-    # Re-fetch image when title or media_type changed
     changed_fields = data.model_dump(exclude_unset=True)
     if "title" in changed_fields or "media_type" in changed_fields:
         image_filename = await _image_service.fetch_image(
@@ -149,17 +119,10 @@ async def update_media(
 async def delete_media(
     media_id: int,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
 ) -> Response:
-    """Delete a media item by ID.
-
-    Args:
-        media_id: The item's primary key.
-        session: Async database session.
-
-    Returns:
-        Empty response with 204 status code.
-    """
-    await _media_service.delete(session, media_id)
+    """Delete a media item by ID."""
+    await _media_service.delete(session, media_id, user_id=user.id)
     return Response(status_code=204)
 
 
@@ -168,21 +131,12 @@ async def update_status(
     media_id: int,
     body: StatusUpdate,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
 ) -> MediaResponse:
-    """Change the consumption status of a media item.
-
-    Automatically records started_at when transitioning to 'in_progress'
-    and completed_at when transitioning to 'completed'.
-
-    Args:
-        media_id: The item's primary key.
-        body: Request body containing the new status.
-        session: Async database session.
-
-    Returns:
-        The updated media item.
-    """
-    return await _media_service.update_status(session, media_id, body.status)
+    """Change the consumption status of a media item."""
+    return await _media_service.update_status(
+        session, media_id, body.status, user_id=user.id
+    )
 
 
 @router.patch("/{media_id}/rating", response_model=MediaResponse)
@@ -190,18 +144,12 @@ async def update_rating(
     media_id: int,
     body: RatingUpdate,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
 ) -> MediaResponse:
-    """Assign a rating (1-10) to a media item.
-
-    Args:
-        media_id: The item's primary key.
-        body: Request body containing the rating value.
-        session: Async database session.
-
-    Returns:
-        The updated media item.
-    """
-    return await _media_service.update_rating(session, media_id, body.rating)
+    """Assign a rating (1-10) to a media item."""
+    return await _media_service.update_rating(
+        session, media_id, body.rating, user_id=user.id
+    )
 
 
 @router.put("/{media_id}/tags", response_model=MediaResponse)
@@ -209,42 +157,26 @@ async def update_tags(
     media_id: int,
     body: TagsUpdate,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
 ) -> MediaResponse:
-    """Replace the tags of a media item.
-
-    Args:
-        media_id: The item's primary key.
-        body: Request body containing the list of tag names.
-        session: Async database session.
-
-    Returns:
-        The updated media item.
-    """
-    return await _media_service.update_tags(session, media_id, body.tags)
+    """Replace the tags of a media item."""
+    return await _media_service.update_tags(
+        session, media_id, body.tags, user_id=user.id
+    )
 
 
 @router.get("/{media_id}/image")
 async def get_media_image(
     media_id: int,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
 ) -> dict:
-    """Return the image URL for a media item.
-
-    Args:
-        media_id: The item's primary key.
-        session: Async database session.
-
-    Returns:
-        A dict with the image_url (or null if no image is set).
-
-    Raises:
-        HTTPException: 404 if the item does not exist.
-    """
-    from fastapi import HTTPException
-
+    """Return the image URL for a media item."""
     item = await session.get(MediaItem, media_id)
     if item is None:
         raise HTTPException(status_code=404, detail="Item not found")
+    if item.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
 
     image_url = f"/images/{item.image_path}" if item.image_path else None
     return {"image_url": image_url}

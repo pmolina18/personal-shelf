@@ -9,3 +9,5 @@ aiofiles
 httpx
 python-multipart
 mcp
+passlib[bcrypt]
+python-jose[cryptography]

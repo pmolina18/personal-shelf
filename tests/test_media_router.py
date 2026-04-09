@@ -2,6 +2,7 @@
 
 import pytest
 import pytest_asyncio
+import sqlalchemy as sa
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -9,9 +10,12 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+
 from backend.main import app
 from backend.db import get_session
+from backend.dependencies import get_current_user
 from backend.models.media import Base
+from backend.models.user import User
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
@@ -22,6 +26,13 @@ async def engine():
     eng = create_async_engine(TEST_DATABASE_URL, echo=False)
     async with eng.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    async with eng.begin() as conn:
+        await conn.execute(
+            sa.text(
+                "INSERT INTO users (id, email, username, password_hash) "
+                "VALUES (1, 'test@test.com', 'testuser', 'fakehash')"
+            )
+        )
     yield eng
     async with eng.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
@@ -50,6 +61,11 @@ async def client(engine):
             yield sess
 
     app.dependency_overrides[get_session] = _override_session
+
+    async def _override_user():
+        return User(id=1, email="test@test.com", username="testuser", password_hash="fakehash")
+
+    app.dependency_overrides[get_current_user] = _override_user
 
     # Register the router (idempotent — FastAPI deduplicates)
     from backend.routers.media import router

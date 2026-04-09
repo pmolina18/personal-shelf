@@ -15,7 +15,10 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+import sqlalchemy as sa
+
 from backend.models.media import Base
+from backend.models.user import User  # noqa: F401 — registers users table
 from backend.schemas.media import (
     MediaCreate,
     MediaFilters,
@@ -67,7 +70,7 @@ async def _setup_catalog(svc, sess, items):
     """Create items and optionally set statuses. Returns created responses."""
     created = []
     for data in items:
-        resp = await svc.create(sess, data)
+        resp = await svc.create(sess, data, user_id=1)
         created.append(resp)
     return created
 
@@ -77,6 +80,13 @@ async def _fresh_session():
     engine = create_async_engine(TEST_DB_URL, echo=False)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    async with engine.begin() as conn:
+        await conn.execute(
+            sa.text(
+                "INSERT INTO users (id, email, username, password_hash) "
+                "VALUES (1, 'test@test.com', 'testuser', 'fakehash')"
+            )
+        )
     factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with factory() as sess:
         yield sess
@@ -98,7 +108,7 @@ def test_combined_filtering_with_and_logic(catalog, filters):
             svc = MediaService()
             await _setup_catalog(svc, sess, catalog)
 
-            result = await svc.list(sess, filters, page=1, size=100)
+            result = await svc.list(sess, filters, page=1, size=100, user_id=1)
 
             for item in result.items:
                 if filters.media_type is not None:
@@ -126,7 +136,7 @@ def test_descending_order_by_creation_date(catalog):
             await _setup_catalog(svc, sess, catalog)
 
             result = await svc.list(
-                sess, MediaFilters(), page=1, size=100
+                sess, MediaFilters(), page=1, size=100, user_id=1
             )
 
             dates = [item.created_at for item in result.items]

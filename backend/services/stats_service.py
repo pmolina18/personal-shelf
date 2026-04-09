@@ -1,5 +1,7 @@
 """Statistics service for catalog-level aggregations."""
 
+from __future__ import annotations
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,7 +15,9 @@ class StatsService:
     Provides aggregated counts and averages across all media items.
     """
 
-    async def get_stats(self, session: AsyncSession) -> CatalogStats:
+    async def get_stats(
+        self, session: AsyncSession, user_id: int = 1
+    ) -> CatalogStats:
         """Compute catalog statistics.
 
         Returns counts grouped by media type and status, and average
@@ -21,6 +25,7 @@ class StatsService:
 
         Args:
             session: The async database session.
+            user_id: Owner user ID to filter stats by.
 
         Returns:
             A CatalogStats with by_type, by_status, and avg_rating_by_type.
@@ -28,6 +33,7 @@ class StatsService:
         # Count by media_type
         type_query = (
             select(MediaItem.media_type, func.count())
+            .where(MediaItem.user_id == user_id)
             .group_by(MediaItem.media_type)
         )
         type_result = await session.execute(type_query)
@@ -41,6 +47,7 @@ class StatsService:
         # Count by status
         status_query = (
             select(MediaItem.status, func.count())
+            .where(MediaItem.user_id == user_id)
             .group_by(MediaItem.status)
         )
         status_result = await session.execute(status_query)
@@ -55,6 +62,7 @@ class StatsService:
         avg_query = (
             select(MediaItem.media_type, func.avg(MediaItem.rating))
             .where(MediaItem.rating.isnot(None))
+            .where(MediaItem.user_id == user_id)
             .group_by(MediaItem.media_type)
         )
         avg_result = await session.execute(avg_query)

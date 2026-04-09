@@ -145,12 +145,115 @@
             >Import / Export</span>
           </Transition>
         </router-link>
+
+        <div
+          v-if="isAuthenticated"
+          class="nav-divider"
+        />
+
+        <router-link
+          v-if="isAuthenticated"
+          to="/feed"
+          class="nav-item"
+          :title="collapsed ? 'Feed' : undefined"
+          @click="mobileOpen = false"
+        >
+          <svg
+            class="nav-icon"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          ><path d="M4 11a9 9 0 0 1 9 9" /><path d="M4 4a16 16 0 0 1 16 16" /><circle
+            cx="5"
+            cy="19"
+            r="1"
+          /></svg>
+          <Transition name="fade-text">
+            <span
+              v-if="!collapsed"
+              class="nav-label"
+            >Feed</span>
+          </Transition>
+        </router-link>
+        <router-link
+          v-if="isAuthenticated"
+          to="/friends"
+          class="nav-item"
+          :title="collapsed ? 'Friends' : undefined"
+          @click="mobileOpen = false"
+        >
+          <svg
+            class="nav-icon"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          ><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle
+            cx="9"
+            cy="7"
+            r="4"
+          /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+          <Transition name="fade-text">
+            <span
+              v-if="!collapsed"
+              class="nav-label"
+            >Friends</span>
+          </Transition>
+        </router-link>
       </nav>
 
       <div class="sidebar-bottom">
+        <template v-if="isAuthenticated">
+          <Transition name="fade-text">
+            <div
+              v-if="!collapsed"
+              class="user-info"
+            >
+              <span class="user-avatar">{{ user?.username?.charAt(0)?.toUpperCase() || '?' }}</span>
+              <span class="user-name">{{ user?.username || 'User' }}</span>
+            </div>
+          </Transition>
+          <button
+            class="logout-btn"
+            :title="collapsed ? 'Logout' : undefined"
+            aria-label="Logout"
+            @click="onLogout"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line
+              x1="21"
+              y1="12"
+              x2="9"
+              y2="12"
+            /></svg>
+            <Transition name="fade-text">
+              <span
+                v-if="!collapsed"
+                class="logout-label"
+              >Logout</span>
+            </Transition>
+          </button>
+        </template>
         <Transition name="fade-text">
           <span
-            v-if="!collapsed"
+            v-if="!collapsed && !isAuthenticated"
             class="sidebar-version"
           >v1.0</span>
         </Transition>
@@ -205,8 +308,19 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuth } from './composables/useAuth.js'
+
+const router = useRouter()
+const { user, isAuthenticated, logout } = useAuth()
+
 const collapsed = ref(false)
 const mobileOpen = ref(false)
+
+function onLogout() {
+  logout()
+  router.push('/login')
+}
 </script>
 
 <style>
@@ -415,6 +529,72 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; }
   padding: 0.75rem 0.85rem;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   min-height: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.user-avatar {
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.user-name {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--sidebar-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: var(--radius-sm);
+  background: none;
+  border: none;
+  color: var(--sidebar-text);
+  cursor: pointer;
+  font-size: 0.87rem;
+  font-weight: 500;
+  transition: all var(--transition-fast);
+  overflow: hidden;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.logout-btn:hover {
+  background: var(--sidebar-hover);
+  color: var(--sidebar-text-active);
+}
+
+.logout-label {
+  font-size: 0.87rem;
+}
+
+.nav-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 0.35rem 0.7rem;
 }
 
 .sidebar-version {

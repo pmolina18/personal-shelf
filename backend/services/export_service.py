@@ -1,5 +1,7 @@
 """Export and import service for catalog JSON serialization."""
 
+from __future__ import annotations
+
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
@@ -18,21 +20,25 @@ class ExportService:
     dict and to import items from a previously exported payload.
     """
 
-    async def export_catalog(self, session: AsyncSession) -> dict:
+    async def export_catalog(
+        self, session: AsyncSession, user_id: int = 1
+    ) -> dict:
         """Export all media items as a JSON-serializable dict.
 
-        Queries every MediaItem in the database, converts each to a
-        MediaResponse (including image URLs), and wraps them in an
+        Queries every MediaItem belonging to the given user, converts each
+        to a MediaResponse (including image URLs), and wraps them in an
         ExportData envelope with version and timestamp.
 
         Args:
             session: The async database session.
+            user_id: Owner user ID to export items for.
 
         Returns:
             A dict matching the ExportData schema with version, exported_at,
             and items list.
         """
-        result = await session.execute(select(MediaItem))
+        query = select(MediaItem).where(MediaItem.user_id == user_id)
+        result = await session.execute(query)
         items = result.scalars().unique().all()
 
         responses = [_to_response(item) for item in items]
@@ -45,7 +51,7 @@ class ExportService:
         return export.model_dump(mode="json")
 
     async def import_catalog(
-        self, session: AsyncSession, data: dict
+        self, session: AsyncSession, data: dict, user_id: int = 1
     ) -> ImportResult:
         """Import media items from a JSON payload.
 
@@ -57,6 +63,7 @@ class ExportService:
         Args:
             session: The async database session.
             data: A dict matching the ExportData schema.
+            user_id: Owner user ID for imported items.
 
         Returns:
             An ImportResult with the count of created items and any errors.
@@ -78,6 +85,7 @@ class ExportService:
         for idx, item_data in enumerate(export_data.items):
             try:
                 item = MediaItem(
+                    user_id=user_id,
                     title=item_data.title,
                     media_type=item_data.media_type.value,
                     status=item_data.status.value,

@@ -19,7 +19,10 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+import sqlalchemy as sa
+
 from backend.models.media import Base
+from backend.models.user import User  # noqa: F401 — registers users table
 from backend.schemas.media import (
     MediaCreate,
     MediaStatus,
@@ -57,6 +60,13 @@ async def _fresh_session():
     engine = create_async_engine(TEST_DB_URL, echo=False)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    async with engine.begin() as conn:
+        await conn.execute(
+            sa.text(
+                "INSERT INTO users (id, email, username, password_hash) "
+                "VALUES (1, 'test@test.com', 'testuser', 'fakehash')"
+            )
+        )
     factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with factory() as sess:
         yield sess
@@ -75,7 +85,7 @@ def test_status_transition_records_started_at(create_data):
     async def _run():
         async for sess in _fresh_session():
             svc = MediaService()
-            created = await svc.create(sess, create_data)
+            created = await svc.create(sess, create_data, user_id=1)
             assert created.started_at is None
 
             updated = await svc.update_status(sess, created.id, "in_progress")
@@ -99,7 +109,7 @@ def test_status_transition_records_completed_at(create_data):
     async def _run():
         async for sess in _fresh_session():
             svc = MediaService()
-            created = await svc.create(sess, create_data)
+            created = await svc.create(sess, create_data, user_id=1)
             assert created.completed_at is None
 
             updated = await svc.update_status(sess, created.id, "completed")
@@ -121,7 +131,7 @@ def test_rejection_of_invalid_status(bad_status, create_data):
     async def _run():
         async for sess in _fresh_session():
             svc = MediaService()
-            created = await svc.create(sess, create_data)
+            created = await svc.create(sess, create_data, user_id=1)
 
             with pytest.raises(HTTPException) as exc_info:
                 await svc.update_status(sess, created.id, bad_status)
@@ -145,7 +155,7 @@ def test_valid_rating_accepted(create_data, rating):
     async def _run():
         async for sess in _fresh_session():
             svc = MediaService()
-            created = await svc.create(sess, create_data)
+            created = await svc.create(sess, create_data, user_id=1)
 
             updated = await svc.update_rating(sess, created.id, rating)
             assert updated.rating == rating
@@ -164,7 +174,7 @@ def test_invalid_rating_rejected(create_data, bad_rating):
     async def _run():
         async for sess in _fresh_session():
             svc = MediaService()
-            created = await svc.create(sess, create_data)
+            created = await svc.create(sess, create_data, user_id=1)
 
             with pytest.raises(HTTPException) as exc_info:
                 await svc.update_rating(sess, created.id, bad_rating)
@@ -189,7 +199,7 @@ def test_tags_within_limit_accepted(create_data, tags):
     async def _run():
         async for sess in _fresh_session():
             svc = MediaService()
-            created = await svc.create(sess, create_data)
+            created = await svc.create(sess, create_data, user_id=1)
 
             updated = await svc.update_tags(sess, created.id, tags)
             assert set(updated.tags) == set(tags)
@@ -211,7 +221,7 @@ def test_tags_over_limit_rejected(create_data, tags):
     async def _run():
         async for sess in _fresh_session():
             svc = MediaService()
-            created = await svc.create(sess, create_data)
+            created = await svc.create(sess, create_data, user_id=1)
 
             with pytest.raises(HTTPException) as exc_info:
                 await svc.update_tags(sess, created.id, tags)

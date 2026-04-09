@@ -17,7 +17,10 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+import sqlalchemy as sa
+
 from backend.models.media import Base
+from backend.models.user import User  # noqa: F401 — registers users table
 from backend.schemas.media import MediaCreate, MediaStatus, MediaType
 from backend.services.media_service import MediaService
 
@@ -49,6 +52,13 @@ async def _fresh_session():
     engine = create_async_engine(TEST_DB_URL, echo=False)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    async with engine.begin() as conn:
+        await conn.execute(
+            sa.text(
+                "INSERT INTO users (id, email, username, password_hash) "
+                "VALUES (1, 'test@test.com', 'testuser', 'fakehash')"
+            )
+        )
     factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with factory() as sess:
         yield sess
@@ -67,7 +77,7 @@ def test_creation_preserves_data_and_assigns_pending(data):
     async def _run():
         async for sess in _fresh_session():
             svc = MediaService()
-            result = await svc.create(sess, data)
+            result = await svc.create(sess, data, user_id=1)
 
             assert result.title == data.title
             assert result.media_type.value == data.media_type.value

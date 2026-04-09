@@ -2,6 +2,7 @@
 
 import pytest
 import pytest_asyncio
+import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -9,6 +10,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from backend.models.media import Base
+from backend.models.user import User  # noqa: F401 — registers users table in Base.metadata
 from backend.services.export_service import ExportService
 from backend.services.media_service import MediaService
 
@@ -22,6 +24,14 @@ async def engine():
     eng = create_async_engine(TEST_DATABASE_URL, echo=False)
     async with eng.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    # Create default test user for user_id FK
+    async with eng.begin() as conn:
+        await conn.execute(
+            sa.text(
+                "INSERT INTO users (id, email, username, password_hash) "
+                "VALUES (1, 'test@test.com', 'testuser', 'fakehash')"
+            )
+        )
     yield eng
     async with eng.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)

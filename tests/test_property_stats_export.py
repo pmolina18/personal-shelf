@@ -16,7 +16,10 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+import sqlalchemy as sa
+
 from backend.models.media import Base
+from backend.models.user import User  # noqa: F401 — registers users table
 from backend.schemas.media import MediaCreate, MediaStatus, MediaType
 from backend.services.export_service import ExportService
 from backend.services.media_service import MediaService
@@ -61,6 +64,13 @@ async def _fresh_session():
     engine = create_async_engine(TEST_DB_URL, echo=False)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    async with engine.begin() as conn:
+        await conn.execute(
+            sa.text(
+                "INSERT INTO users (id, email, username, password_hash) "
+                "VALUES (1, 'test@test.com', 'testuser', 'fakehash')"
+            )
+        )
     factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with factory() as sess:
         yield sess
@@ -94,7 +104,7 @@ def test_statistics_consistent_with_catalog(items):
             ratings_by_type: dict[str, list[int]] = defaultdict(list)
 
             for create_data, rating, status in items:
-                result = await media_svc.create(sess, create_data)
+                result = await media_svc.create(sess, create_data, user_id=1)
                 item_id = result.id
 
                 # Update status (need in_progress before completed for dates)
@@ -115,7 +125,7 @@ def test_statistics_consistent_with_catalog(items):
                     ratings_by_type[create_data.media_type.value].append(rating)
 
             # Get stats from service
-            stats = await stats_svc.get_stats(sess)
+            stats = await stats_svc.get_stats(sess, user_id=1)
 
             total_items = len(items)
 
@@ -172,11 +182,11 @@ def test_json_round_trip(items):
             # Create all items
             originals = []
             for create_data in items:
-                result = await media_svc.create(sess, create_data)
+                result = await media_svc.create(sess, create_data, user_id=1)
                 originals.append(result)
 
             # Export catalog
-            exported = await export_svc.export_catalog(sess)
+            exported = await export_svc.export_catalog(sess, user_id=1)
 
             assert exported["version"] == "1.0"
             assert len(exported["items"]) == len(originals)
@@ -192,7 +202,7 @@ def test_json_round_trip(items):
             await sess.commit()
 
             # Import from exported JSON
-            import_result = await export_svc.import_catalog(sess, exported)
+            import_result = await export_svc.import_catalog(sess, exported, user_id=1)
 
             assert import_result.created == len(originals)
             assert len(import_result.errors) == 0

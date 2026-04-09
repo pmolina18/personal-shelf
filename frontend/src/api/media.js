@@ -11,10 +11,13 @@ const BASE_URL = '/api'
  */
 async function request(path, options = {}) {
   const url = `${BASE_URL}${path}`
-  const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', ...options.headers },
-    ...options,
-  })
+  const token = localStorage.getItem('access_token')
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...options.headers,
+  }
+  const res = await fetch(url, { ...options, headers })
 
   // 204 No Content — nothing to parse
   if (res.status === 204) return null

@@ -24,7 +24,10 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+import sqlalchemy as sa
+
 from backend.models.media import Base, MediaItem
+from backend.models.user import User  # noqa: F401 — registers users table
 from backend.schemas.media import MediaCreate, MediaType
 from backend.services.media_service import MediaService, _to_response
 
@@ -58,6 +61,13 @@ async def _fresh_session():
     engine = create_async_engine(TEST_DB_URL, echo=False)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    async with engine.begin() as conn:
+        await conn.execute(
+            sa.text(
+                "INSERT INTO users (id, email, username, password_hash) "
+                "VALUES (1, 'test@test.com', 'testuser', 'fakehash')"
+            )
+        )
     factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with factory() as sess:
         yield sess
@@ -79,7 +89,7 @@ def test_create_returns_nonnull_naive_timestamps(create_data):
     async def _run():
         async for sess in _fresh_session():
             svc = MediaService()
-            result = await svc.create(sess, create_data)
+            result = await svc.create(sess, create_data, user_id=1)
 
             assert result.created_at is not None, (
                 "created_at must not be None after create()"
@@ -118,9 +128,9 @@ def test_get_returns_item_with_correct_timestamps(create_data):
     async def _run():
         async for sess in _fresh_session():
             svc = MediaService()
-            created = await svc.create(sess, create_data)
+            created = await svc.create(sess, create_data, user_id=1)
 
-            fetched = await svc.get(sess, created.id)
+            fetched = await svc.get(sess, created.id, user_id=1)
 
             assert fetched.id == created.id, (
                 f"get() returned id={fetched.id}, expected {created.id}"
@@ -158,10 +168,10 @@ def test_delete_completes_without_error(create_data):
     async def _run():
         async for sess in _fresh_session():
             svc = MediaService()
-            created = await svc.create(sess, create_data)
+            created = await svc.create(sess, create_data, user_id=1)
 
             # delete() should not raise
-            await svc.delete(sess, created.id)
+            await svc.delete(sess, created.id, user_id=1)
 
     asyncio.run(_run())
 
@@ -184,7 +194,7 @@ def test_to_response_builds_image_url(create_data, img_path):
     async def _run():
         async for sess in _fresh_session():
             svc = MediaService()
-            created = await svc.create(sess, create_data)
+            created = await svc.create(sess, create_data, user_id=1)
 
             # Manually set image_path on the ORM object
             item = await sess.get(MediaItem, created.id)

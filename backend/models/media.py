@@ -1,5 +1,7 @@
 """SQLAlchemy models for media_items, tags, and media_tags."""
 
+from __future__ import annotations
+
 from datetime import datetime
 
 from sqlalchemy import Column, ForeignKey, Integer, String, Table, Text, func
@@ -23,6 +25,7 @@ class MediaItem(Base):
 
     Attributes:
         id: Unique identifier.
+        user_id: ID of the owning user.
         title: Title of the media item.
         media_type: Type of media (movie, book, series).
         status: Consumption status (pending, in_progress, completed).
@@ -36,11 +39,13 @@ class MediaItem(Base):
         started_at: Timestamp when consumption started.
         completed_at: Timestamp when consumption was completed.
         tags: Associated tags via many-to-many relationship.
+        owner: The user who owns this media item.
     """
 
     __tablename__ = "media_items"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     media_type: Mapped[str] = mapped_column(String(20), nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
@@ -58,9 +63,11 @@ class MediaItem(Base):
     started_at: Mapped[datetime | None] = mapped_column(nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(nullable=True)
 
-    tags: Mapped[list["Tag"]] = relationship(
+    tags: Mapped[list[Tag]] = relationship(
         "Tag", secondary=media_tags, back_populates="media_items", lazy="selectin"
     )
+
+    owner: Mapped[User] = relationship("User", back_populates="media_items")
 
     def __repr__(self) -> str:
         return f"<MediaItem(id={self.id}, title='{self.title}', type='{self.media_type}')>"
