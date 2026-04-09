@@ -5,6 +5,8 @@ creating, updating, filtering, and serializing media items. Also includes
 schemas for pagination, statistics, export/import, and error responses.
 """
 
+from __future__ import annotations
+
 from datetime import datetime
 from enum import Enum
 
@@ -217,3 +219,21 @@ class ErrorResponse(BaseModel):
     """
 
     detail: str
+
+
+class MetadataCandidate(BaseModel):
+    """Candidato de metadatos devuelto por la búsqueda en APIs externas.
+
+    Attributes:
+        title: Título del candidato (obligatorio).
+        year: Año de publicación o estreno.
+        creator: Director, autor o creador.
+        description: Sinopsis o descripción.
+        image_url: URL de imagen de portada.
+    """
+
+    title: str
+    year: int | None = None
+    creator: str | None = None
+    description: str | None = None
+    image_url: str | None = None

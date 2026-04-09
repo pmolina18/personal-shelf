@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import Response
@@ -17,6 +19,7 @@ from backend.schemas.media import (
     MediaStatus,
     MediaType,
     MediaUpdate,
+    MetadataCandidate,
     PaginatedResult,
     RatingUpdate,
     StatusUpdate,
@@ -24,11 +27,45 @@ from backend.schemas.media import (
 )
 from backend.services.image_service import ImageService
 from backend.services.media_service import MediaService, _to_response
+from backend.services.metadata_service import MetadataService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/media", tags=["media"])
 
 _media_service = MediaService()
 _image_service = ImageService()
+_metadata_service = MetadataService()
+
+
+# --- Task 3.1: metadata-search MUST be registered before {media_id} routes ---
+
+
+@router.get("/metadata-search", response_model=list[MetadataCandidate])
+async def search_metadata(
+    title: str = Query(..., min_length=1),
+    media_type: MediaType = Query(...),
+    user: User = Depends(get_current_user),
+) -> list[MetadataCandidate]:
+    """Busca sugerencias de metadatos en APIs externas.
+
+    Args:
+        title: Título a buscar (mínimo 1 carácter).
+        media_type: Tipo de media (movie, book, series).
+        user: Usuario autenticado.
+
+    Returns:
+        Lista de hasta 5 candidatos de metadatos.
+
+    Raises:
+        HTTPException: 400 si el título está vacío.
+    """
+    if not title or not title.strip():
+        raise HTTPException(status_code=400, detail="Title must not be empty")
+    return await _metadata_service.search(title, media_type.value)
+
+
+# --- Task 3.2: create_media with metadata autofill ---
 
 
 @router.post("", response_model=MediaResponse, status_code=201)
@@ -39,8 +76,27 @@ async def create_media(
 ) -> MediaResponse:
     """Create a new media item.
 
-    Automatically fetches a representative image after creation.
+    Automatically fills missing year, creator, and notes from external
+    metadata APIs when not provided by the user. Also fetches a
+    representative image after creation.
     """
+    # Autocompletar campos vacíos con metadatos externos
+    if data.year is None or data.creator is None or data.notes is None:
+        try:
+            candidates = await _metadata_service.search(
+                data.title, data.media_type.value,
+            )
+            if candidates:
+                best = candidates[0]
+                if data.year is None and best.year is not None:
+                    data.year = best.year
+                if data.creator is None and best.creator is not None:
+                    data.creator = best.creator
+                if data.notes is None and best.description is not None:
+                    data.notes = best.description
+        except Exception:
+            logger.exception("Metadata autofill failed during creation")
+
     result = await _media_service.create(session, data, user_id=user.id)
 
     image_filename = await _image_service.fetch_image(
@@ -87,6 +143,9 @@ async def get_media(
     return await _media_service.get(session, media_id, user_id=user.id)
 
 
+# --- Task 4.1: update_media with metadata autofill on title/type change ---
+
+
 @router.put("/{media_id}", response_model=MediaResponse)
 async def update_media(
     media_id: int,
@@ -96,12 +155,39 @@ async def update_media(
 ) -> MediaResponse:
     """Update an existing media item.
 
-    Triggers a new image fetch when title or media_type changes.
+    When title or media_type changes, automatically fills missing year,
+    creator, and notes from external metadata APIs (only for fields not
+    explicitly provided in the update request). Also triggers a new image
+    fetch when title or media_type changes.
     """
+    changed = data.model_dump(exclude_unset=True)
+
+    # Re-obtener metadatos si title o media_type cambiaron
+    if "title" in changed or "media_type" in changed:
+        try:
+            current = await _media_service.get(session, media_id, user_id=user.id)
+            effective_title = changed.get("title", current.title)
+            effective_type = changed.get("media_type", current.media_type)
+            if hasattr(effective_type, "value"):
+                effective_type = effective_type.value
+
+            candidates = await _metadata_service.search(
+                effective_title, effective_type,
+            )
+            if candidates:
+                best = candidates[0]
+                if "year" not in changed and best.year is not None:
+                    data.year = best.year
+                if "creator" not in changed and best.creator is not None:
+                    data.creator = best.creator
+                if "notes" not in changed and best.description is not None:
+                    data.notes = best.description
+        except Exception:
+            logger.exception("Metadata autofill failed during update")
+
     result = await _media_service.update(session, media_id, data, user_id=user.id)
 
-    changed_fields = data.model_dump(exclude_unset=True)
-    if "title" in changed_fields or "media_type" in changed_fields:
+    if "title" in changed or "media_type" in changed:
         image_filename = await _image_service.fetch_image(
             result.title, result.media_type.value,
         )
