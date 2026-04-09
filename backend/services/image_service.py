@@ -5,9 +5,12 @@ for representative images, downloads them to local storage, and provides
 fallback default images when no result is found or an error occurs.
 """
 
+import hashlib
 import logging
 
+import httpx
 
+from backend.config import IMAGE_STORAGE_PATH, TMDB_API_KEY
 
 logger = logging.getLogger(__name__)
 

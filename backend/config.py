@@ -9,6 +9,15 @@ DATABASE_URL: str = os.getenv(
     "postgresql+asyncpg://postgres:postgres@localhost:5432/media_tracker",
 )
 
+# CORS — comma-separated origins for production, None allows all in dev
+ALLOWED_ORIGINS: str | None = os.getenv("ALLOWED_ORIGINS", None)
+
+
+def is_neon_db() -> bool:
+    """Detect if DATABASE_URL points to a Neon.dev host."""
+    return ".neon.tech" in DATABASE_URL
+
+
 # Image storage
 BASE_DIR = Path(__file__).resolve().parent
 IMAGE_STORAGE_PATH: Path = BASE_DIR / "images"

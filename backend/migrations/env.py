@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 # Add the project root to sys.path so backend imports work.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from backend.config import DATABASE_URL  # noqa: E402
+from backend.config import DATABASE_URL, is_neon_db  # noqa: E402
 from backend.models.media import Base  # noqa: E402
 
 config = context.config
@@ -51,10 +51,13 @@ def do_run_migrations(connection: Connection) -> None:
 
 async def run_async_migrations() -> None:
     """Run migrations in 'online' mode with async engine."""
+    engine_config = config.get_section(config.config_ini_section, {})
+    connect_args = {"ssl": "require"} if is_neon_db() else {}
     connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        engine_config,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        connect_args=connect_args,
     )
 
     async with connectable.connect() as connection:
