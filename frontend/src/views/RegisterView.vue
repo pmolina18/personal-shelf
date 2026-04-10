@@ -7,10 +7,10 @@
       <div class="auth-header">
         <span class="auth-logo">📚</span>
         <h1 class="auth-title">
-          Create your account
+          Personal<span class="auth-title-accent">Shelf</span>
         </h1>
         <p class="auth-subtitle">
-          Start building your personal shelf
+          Create your account
         </p>
       </div>
 
@@ -204,7 +204,7 @@ async function onRequestAccess() {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 80vh;
+  min-height: 100vh;
 }
 
 .auth-card {
@@ -229,10 +229,14 @@ async function onRequestAccess() {
 }
 
 .auth-title {
-  font-size: 1.4rem;
+  font-size: 1.6rem;
   font-weight: 700;
   color: var(--color-text);
   margin-bottom: 0.2rem;
+}
+
+.auth-title-accent {
+  color: var(--color-primary);
 }
 
 .auth-subtitle {

@@ -4,6 +4,7 @@
     :class="{ 'sidebar-collapsed': collapsed }"
   >
     <aside
+      v-if="!isAuthPage"
       class="sidebar"
       :class="{ collapsed, 'mobile-open': mobileOpen }"
     >
@@ -289,8 +290,14 @@
       </div>
     </aside>
 
-    <div class="main-wrapper">
-      <header class="topbar mobile-only">
+    <div
+      class="main-wrapper"
+      :class="{ 'no-sidebar': isAuthPage }"
+    >
+      <header
+        v-if="!isAuthPage"
+        class="topbar mobile-only"
+      >
         <button
           class="topbar-toggle"
           aria-label="Toggle menu"
@@ -322,13 +329,13 @@
           /></svg>
         </button>
       </header>
-      <main class="content">
+      <main :class="isAuthPage ? 'content content--auth' : 'content'">
         <router-view />
       </main>
     </div>
 
     <div
-      v-if="mobileOpen"
+      v-if="mobileOpen && !isAuthPage"
       class="overlay"
       @click="mobileOpen = false"
     />
@@ -336,12 +343,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuth } from './composables/useAuth.js'
 import { getUnreadCount } from './api/recommendations.js'
 
 const router = useRouter()
+const route = useRoute()
+const isAuthPage = computed(() => !!route.meta?.isAuth)
 const { user, isAuthenticated, logout } = useAuth()
 
 const collapsed = ref(false)
@@ -684,6 +693,10 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; }
   margin-left: var(--sidebar-collapsed-width);
 }
 
+.main-wrapper.no-sidebar {
+  margin-left: 0;
+}
+
 .topbar {
   display: none;
   align-items: center;
@@ -710,6 +723,14 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; }
   padding: 2rem 2.5rem 4rem;
   max-width: 1200px;
   width: 100%;
+}
+
+.content--auth {
+  max-width: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .overlay { display: none; }
