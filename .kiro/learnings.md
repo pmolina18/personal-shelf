@@ -799,3 +799,56 @@
 - Observation: The tag filter in `ExploreService.list_global` used a SQL JOIN (`items_q.join(MediaItem.tags).where(Tag.name.ilike(...))`) which filtered items BEFORE deduplication. This caused two problems: (1) the representative item (chosen by image priority) might not have the matching tag even though another duplicate did, leading to missing results, and (2) the JOIN could produce duplicate rows that confused the dedup logic. The fix was moving the tag filter to Python-side AFTER deduplication — iterating the deduped list and checking `any(tag_lower in t.lower() for t in item.tags)`. This is correct because the deduped items already have their tags populated from the representative's `item.tags` relationship (loaded via `lazy="selectin"`). The `Tag` import became unused after removing the SQL join and was already absent from the imports (the subagent had used `MediaItem` only).
 - Action: For explore/discovery features with deduplication, always apply tag/category filters AFTER deduplication, not in the SQL query. SQL-level tag filtering only works correctly when there's a 1:1 relationship between query rows and display items — with deduplication, the representative selection happens in Python, so filters on representative attributes must also happen in Python. This is different from the personal catalog (`MediaService.list`) where there's no deduplication and SQL-level tag filtering is correct.
 - Confidence: high
+
+**[2026-04-10] — Git push: explore improvements two-commit grouping**
+- Observation: Existing patterns held. Split into `feat:` (7 code files, 232 insertions) and `chore:` (IDEAS, learnings, 1 updated image). Push completed without issues. No new patterns discovered.
+- Action: No changes needed.
+- Confidence: high
+
+
+**[2026-04-10] — IDEA-9 implementation: type-colored card borders (direct, no spec/subagent)**
+- Observation: Existing patterns held. For small UI improvements (CSS-only changes across 2 files), implementing directly without spec creation or subagent delegation was the fastest approach — three `strReplace` calls total. The CSS custom properties system in `App.vue`'s global `<style>` block continues to work well as a design token layer: new `--color-type-movie/series/book` variables are immediately available in all scoped component styles. Using `border-left: 3px solid` rather than full border gives a subtle visual cue without overwhelming the card design. The dynamic class pattern `:class="['media-card', \`type-${item.media_type}\`]"` is clean and extensible — adding a new media type only requires one new CSS variable + one new class rule. No new technical issues discovered.
+- Action: For CSS-only UI improvements that touch ≤3 files and require no backend changes, skip spec creation and implement directly. Define color tokens in App.vue's global style block and consume them in scoped component styles. For type-based visual differentiation, prefer border-left accent over full background changes — it's subtler and doesn't interfere with existing card content styling.
+- Confidence: high
+
+
+**[2026-04-10] — UI iteration: type-colored card borders (v2, user feedback)**
+- Observation: A 3px `border-left` accent on MediaCard was too subtle for the user — "se ve demasiado poco". Switched to a two-signal approach: (1) full `border-color` change on the entire card border, (2) pastel background tint on `.card-body` (the text area below the image). This required splitting each type's color token into two variants (`--color-type-X-bg` for background, `--color-type-X-border` for border) instead of a single `--color-type-X`. The scoped CSS selector `.type-movie .card-body` works correctly inside `<style scoped>` because Vue's scoping attribute is applied to both the parent and child elements.
+- Action: For visual differentiation features, a single subtle signal (thin border accent) may not be enough — combine border + background tint for stronger visual distinction while keeping it pastel/non-aggressive. When iterating on UI feedback, split color tokens into purpose-specific variants (bg, border, text) from the start to avoid renaming later. User preference noted: prefers noticeable-but-not-loud visual cues.
+- Confidence: high
+
+
+**[2026-04-10] — Session: dev server startup**
+- Observation: Existing patterns held. PostgreSQL via Postgres.app was already running (`pg_isready -h localhost` confirmed). Backend started with `python -m uvicorn backend.main:app --reload --port 8000` and frontend with `npm run dev` from `frontend/`. Both servers started without issues. Reading `learnings.md` in full now requires four `readFile` calls with `start_line` offsets (1→212, 213→362, 363→552, 553→697, 698→end) due to the file exceeding 800 lines. No new patterns discovered.
+- Action: No changes needed. Existing patterns confirmed. The learnings file archival remains a pending consideration — it now requires 4-5 reads to cover fully.
+- Confidence: high
+
+
+**[2026-04-10] — Bugfix: ExploreCard missing type-colored borders/backgrounds**
+- Observation: The IDEA-9 implementation (type-colored card borders) only applied to `MediaCard.vue` but not to `ExploreCard.vue`. ExploreCard was missing three things: (1) the dynamic class binding `:class="['explore-card', \`type-${item.media_type}\`]"` on the root `<article>`, (2) the `.type-movie/.type-series/.type-book` border-color rules, and (3) the `.type-X .explore-card__body` background tint rules. Three `strReplace` calls fixed it — template class binding, border rules, and body background rules.
+- Action: When implementing visual changes that apply to card components, always check ALL card variants in the project (MediaCard, ExploreCard, and any future card types). A feature applied to one card component should be mirrored to others unless there's a specific reason not to. Consider extracting shared card styles into a global CSS class or a shared component to avoid this divergence.
+- Confidence: high
+
+
+**[2026-04-10] — Bugfix: card-body background not filling full height in grid**
+- Observation: When cards in a CSS Grid have variable content height (some have tags, others don't), a background color on `.card-body` doesn't reach the bottom of the card because the element only sizes to its content. The fix is making the inner link wrapper (`card-link`) a flex column with `height: 100%` and giving `card-body` `flex: 1` so it stretches to fill remaining space. This is a common pattern when applying background colors to the content area of grid cards with heterogeneous content.
+- Action: When applying background colors to card sub-sections inside a CSS Grid, always ensure the card's inner wrapper is `display: flex; flex-direction: column; height: 100%` and the colored section has `flex: 1`. Without this, cards with less content will have the background stop short of the card bottom.
+- Confidence: high
+
+
+**[2026-04-10] — Bugfix (v2): card-body background still not filling — incomplete flex chain**
+- Observation: The initial fix (`card-link: height: 100%` + `card-body: flex: 1`) didn't work because the `<article>` parent wasn't a flex container. In a CSS Grid, grid items stretch in height by default (`align-items: stretch`), but that height doesn't propagate to children unless the parent is also a flex/grid container. The full chain required: (1) `<article>` → `display: flex; flex-direction: column`, (2) `<router-link>` (card-link) → `flex: 1; flex-direction: column` (changed from `height: 100%` to `flex: 1` which is more reliable inside a flex parent), (3) `<div class="card-body">` → `flex: 1`. All three levels must be flex containers with `flex: 1` for the background to fill the remaining space.
+- Action: When applying background colors to nested elements inside CSS Grid cards, ensure the ENTIRE flex chain from grid item down to the colored element uses `display: flex; flex-direction: column` + `flex: 1`. Missing any level breaks the propagation. Prefer `flex: 1` over `height: 100%` inside flex parents — it's more reliable and doesn't depend on explicit parent height.
+- Confidence: high
+
+
+**[2026-04-10] — Bugfix (v3): card background color — move to root element instead of nested child**
+- Observation: Applying `background` on a nested `.card-body` inside a flex chain (grid item → article → router-link → div) failed to fill the full card height despite multiple flex chain fixes. The simpler and more reliable approach is setting the `background` on the root `<article>` element (`.media-card`) itself. Since the card image (`card-image` with `aspect-ratio: 2/3` and `object-fit: cover`) fully covers the top portion, the article's background color only shows through in the text area below the image — achieving the same visual effect without any flex height propagation issues. This eliminates the need for the entire flex chain fix (flex column on article, flex:1 on card-link, flex:1 on card-body).
+- Action: When adding a background color to the "content area" of a card that has an image covering the top, set the background on the card root element rather than on a nested content div. The image naturally masks the background in the image area. This avoids all flex/height propagation complexity. Only use nested background colors when the image doesn't fully cover its area (e.g., transparent PNGs or partial-width images).
+- Confidence: high
+
+
+**[2026-04-10] — Seed script expansion: more content from TMDB + Open Library**
+- Observation: Existing patterns held. Expanding the seed script from 1 page to 3 pages per TMDB endpoint (movies, series) and from 1 to 3 Open Library categories (fiction, sci-fi, fantasy) tripled the content. The script's deduplication logic (`_existing_keys` + `existing` set) correctly skipped the ~60 items already in the DB and only created the new ones (40 movies, 40 series, 31 books). The `timeout=120000` on `executeBash` was necessary — the script takes ~90s due to sequential image downloads from TMDB for each new movie/series. Books don't get images from Open Library in this script (no `fetch_image` call in `_seed_books`). No new technical issues discovered.
+- Action: When expanding seed scripts, keep the deduplication logic intact and just increase the data source parameters (pages, categories). For long-running seed scripts with many HTTP calls, use a generous timeout (120s+). Consider adding image fetching for books in a future iteration.
+- Confidence: high

@@ -101,10 +101,11 @@ Cada idea sigue este formato:
 - Contexto: Requiere tres nuevos campos nullable en `MediaItem`: `pending_at`, `in_progress_at`, `completed_at` (DateTime, nullable) + migración Alembic. Cada vez que se actualice el `status` de un item (vía `MediaService.update_media` o el endpoint PATCH de status), se rellena el campo correspondiente con `datetime.utcnow()`. También actualizar `MediaResponse` en schemas para exponer las fechas, y mostrarlas en `MediaDetailView.vue` (ej: "En pending desde 12 mar 2026", "Completado el 5 abr 2026").
 - Notas: Los items existentes tendrán los tres campos a `null` — solo se rellenan a partir de ahora. Si un item vuelve a un estado anterior (ej: de completed a in_progress), se sobreescribe la fecha de ese estado con la nueva. Considerar mostrar una mini-timeline visual en el detalle del item con los tres hitos.
 
-## [IDEA-9] Bordes de color por tipo de media en las tarjetas
+## [IDEA-9] Bordes de color por tipo de media en las tarjetas ✅ COMPLETADA
 
 - Tipo: mejora
 - Prioridad: alta
+- Estado: Implementada el 2026-04-10. Borde izquierdo pastel por tipo (azul películas, verde series, ámbar libros) en MediaCard + CSS custom properties en App.vue.
 - Descripción: Que las tarjetas (MediaCard) tengan un borde de color distinto según el tipo de item (película, serie, libro, etc.). Colores pastel y poco llamativos para que no canten demasiado pero se distinga de un vistazo qué tipo de contenido es cada tarjeta.
 - Contexto: Archivo principal: `frontend/src/components/MediaCard.vue`. Los tipos de media están definidos en `backend/schemas/media.py` (MediaType enum). Ya existen CSS custom properties en `App.vue` para el sistema de diseño. Se puede resolver solo con CSS (borde izquierdo o borde completo con color pastel según `media_type`).
 - Notas: Con que el borde sea distinto probablemente sea suficiente — no hace falta cambiar el fondo entero de la tarjeta. Colores sugeridos: tonos pastel suaves (azul para películas, verde para series, ámbar para libros, etc.). Definir las variables de color en App.vue y aplicarlas condicionalmente en MediaCard con una clase dinámica tipo `:class="'type-' + item.media_type"`.
