@@ -39,22 +39,13 @@ Cada idea sigue este formato:
 
 ---
 
-## [IDEA-3] Recomendaciones entre amigos
+## [IDEA-3] Recomendaciones entre amigos ✅ COMPLETADA → `.kiro/specs/friend-recommendations/`
 
 - Tipo: feature
 - Prioridad: alta
 - Descripción: me gustaría que existiese la opción de recomendarle a tus amigos alguna película o item que tu hayas visto o estés viendo
 - Contexto: en la ventana de catalogo, dentro de cada item tuvieses un botón para recomendar a amigos
 - Notas: (opcional) Estaría bien que tuvieses un sistema de mensajes desde la pantalla de catálogo, con una "bolita" en la que aparezca el número de recomendaciones que tienes etc
-
----
-
-## [IDEA-4] Pantalla de login dedicada
-
-- Tipo: feature
-- Prioridad: media
-- Descripción: Crear una pantalla de login única y dedicada. Si el usuario no tiene token de acceso válido, debería ser redirigido automáticamente a esta pantalla. Centralizar todo el flujo de autenticación en un solo punto de entrada.
-- Contexto: Actualmente el login se gestiona con el social login de Google. La idea es tener una vista `/login` que sea el punto de entrada obligatorio para usuarios no autenticados.
-- Notas: Incluir redirección automática desde cualquier ruta protegida. Después del login exitoso, redirigir al usuario a la ruta que intentaba acceder originalmente.
+- Estado: Implementada el 2026-04-10. Botón de recomendar en detalle de media, vista de recomendaciones con badge de contador en el sidebar, aceptar/rechazar recomendaciones.
 
 ---

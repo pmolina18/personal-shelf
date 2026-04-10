@@ -682,7 +682,27 @@
 - Action: When evolving a boolean field to a status enum, do all 8 layers in one pass (model → schema → service → router → API client → composable → view → DB migration) to avoid partial states. For direct SQL migrations during development, always verify the data with a SELECT after the migration. For the `accept` action that copies media items between users, copy only the metadata fields (title, type, year, creator, image_path) — don't copy user-specific fields (status, rating, notes, tags).
 - Confidence: high
 
+**[2026-04-10] — Session: git push with two-commit grouping**
+- Observation: Existing patterns held. The `git status --short` → selective `git add` → `git commit` → `git push` workflow worked without issues across all three workspace repos. Only `personal-shelf` had pending changes (22 files). Splitting into two commits (feat: recommendations feature, chore: specs/learnings/config) followed the established grouping pattern. Reading `learnings.md` in full now requires three `readFile` calls with `start_line` offsets due to the file exceeding 680 lines — consistent with the documented truncation pattern. No new issues discovered.
+- Action: No changes needed. Existing patterns confirmed. The learnings file archival remains a pending consideration.
+- Confidence: high
+
 **[2026-04-10] — Bugfix: missing String import after Boolean→String column type change**
 - Observation: When changing the `is_read` column from `Boolean` to `status: String(20)` in `recommendation.py`, the `strReplace` that swapped `Boolean` out of the import block also removed `String` because the replacement block didn't include it (the original subagent-written file had neither `String` nor `Boolean` — it only had `Boolean`). The `NameError: name 'String' is not defined` crashed uvicorn on reload. The fix was a second `strReplace` to add `String` back to the import block. This is a variant of the known fsWrite/strReplace import issue — when replacing import blocks, always verify the new block contains ALL types used in the file, not just the ones being added.
 - Action: When changing a column type in a SQLAlchemy model (e.g., Boolean → String), update the import block in a single atomic replacement that includes both the removal of the old type and the addition of the new one. After any model file edit, check `getProcessOutput` on the uvicorn terminal to confirm the reload succeeded before moving on.
+- Confidence: high
+
+**[2026-04-10] — UI: hiding sidebar on auth pages (login/register)**
+- Observation: Existing patterns held. The sidebar in `App.vue` was always visible, including on login/register pages. The fix used `useRoute()` + a `computed(() => !!route.meta?.isAuth)` to conditionally hide the sidebar (`v-if="!isAuthPage"`), topbar, and overlay, plus a `.no-sidebar` class on `.main-wrapper` to remove `margin-left`. The `min-height` on auth views was bumped from `80vh` to `100vh` since there's no sidebar eating vertical space. Both LoginView and RegisterView got the app name as the `<h1>` title ("Personal**Shelf**" with a `.auth-title-accent` span for the green color). No new technical issues — `getDiagnostics` returned clean on all three files.
+- Action: For pages that should hide the app shell (login, register, onboarding), use `route.meta` flags checked in `App.vue` via a computed property. Apply both the `v-if` on the sidebar and a CSS class on the main wrapper to remove the margin. Keep auth pages consistent (same branding, same layout pattern).
+- Confidence: high
+
+**[2026-04-10] — UI: auth page centering fix (content wrapper override)**
+- Observation: Hiding the sidebar on auth pages wasn't enough to center the login form — the `.content` wrapper in App.vue still applied `max-width: 1200px` and `padding: 2rem 2.5rem 4rem`, which constrained and offset the form. The fix was adding a `.content--auth` class (applied via `:class` ternary on `isAuthPage`) that sets `max-width: none; padding: 0; display: flex; align-items: center; justify-content: center;`. This lets the auth view's own `min-height: 100vh` centering work correctly within the full viewport.
+- Action: When hiding the app shell for specific pages, also override the content wrapper's constraints (max-width, padding) — removing the sidebar alone isn't sufficient if the main content area has its own layout restrictions. Use a modifier class on the content wrapper rather than duplicating centering logic in each auth view.
+- Confidence: high
+
+**[2026-04-10] — Session: IDEAS.md status update + auth page centering**
+- Observation: Existing patterns held. Marking IDEA-3 as completed required verifying the implementation exists (RecommendationsView.vue, nav badge, spec files) before updating the markdown. The auth page centering fix (hiding sidebar + overriding `.content` wrapper) was a two-step process — the first pass (sidebar hide) wasn't sufficient because the `.content` wrapper still constrained layout. No new technical issues discovered.
+- Action: No changes needed. When marking ideas as completed, verify implementation artifacts exist before updating status. For layout changes that span multiple wrapper levels (app shell → content wrapper → view), test each level's constraints independently.
 - Confidence: high
