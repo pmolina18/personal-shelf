@@ -1,10 +1,10 @@
 # Feature: social-login, Property 11: user_id assignment on create
 # Feature: social-login, Property 12: listing isolation by user
 # Feature: social-login, Property 13: cross-access rejection between users
-# Feature: social-login, Property 14: stats and export isolation
+# Feature: social-login, Property 14: stats isolation
 """Property tests for multi-tenancy isolation (Properties 11-14).
 
-Validates: Requirements 5.1, 5.2, 5.3, 5.5, 5.6
+Validates: Requirements 5.1, 5.2, 5.3, 5.5
 """
 from __future__ import annotations
 
@@ -23,7 +23,6 @@ from sqlalchemy.ext.asyncio import (
 from backend.models.media import Base, MediaItem
 from backend.models.user import User  # noqa: F401
 from backend.schemas.media import MediaCreate, MediaFilters, MediaType, MediaUpdate
-from backend.services.export_service import ExportService
 from backend.services.media_service import MediaService
 from backend.services.stats_service import StatsService
 
@@ -176,16 +175,15 @@ def test_cross_access_rejection(data):
     items_b=st.lists(valid_media_create, min_size=1, max_size=5),
 )
 def test_stats_and_export_isolation(items_a, items_b):
-    """Stats and export for each user reflect only their own items.
+    """Stats for each user reflect only their own items.
 
-    **Validates: Requirements 5.5, 5.6**
+    **Validates: Requirement 5.5**
     """
 
     async def _run():
         async for sess in _fresh_session():
             media_svc = MediaService()
             stats_svc = StatsService()
-            export_svc = ExportService()
 
             for item_data in items_a:
                 await media_svc.create(sess, item_data, user_id=1)
@@ -200,12 +198,5 @@ def test_stats_and_export_isolation(items_a, items_b):
             stats_b = await stats_svc.get_stats(sess, user_id=2)
             total_b = sum(stats_b.by_type.values())
             assert total_b == len(items_b)
-
-            # Export isolation
-            export_a = await export_svc.export_catalog(sess, user_id=1)
-            assert len(export_a["items"]) == len(items_a)
-
-            export_b = await export_svc.export_catalog(sess, user_id=2)
-            assert len(export_b["items"]) == len(items_b)
 
     asyncio.run(_run())

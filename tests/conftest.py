@@ -11,7 +11,6 @@ from sqlalchemy.ext.asyncio import (
 
 from backend.models.media import Base
 from backend.models.user import User  # noqa: F401 — registers users table in Base.metadata
-from backend.services.export_service import ExportService
 from backend.services.media_service import MediaService
 
 # In-memory SQLite for fast, isolated tests
@@ -52,9 +51,3 @@ async def session(engine):
 def media_service():
     """Return a MediaService instance."""
     return MediaService()
-
-
-@pytest.fixture
-def export_service():
-    """Return an ExportService instance."""
-    return ExportService()

@@ -13,7 +13,6 @@ from backend.db import get_session
 from backend.models.media import MediaItem
 from backend.routers.auth import router as auth_router
 from backend.routers.explore import router as explore_router
-from backend.routers.export_import import router as export_import_router
 from backend.routers.feed import router as feed_router
 from backend.routers.recommendations import router as recommendations_router
 from backend.routers.friends import router as friends_router
@@ -37,7 +36,6 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(media_router)
 app.include_router(stats_router)
-app.include_router(export_import_router)
 app.include_router(friends_router)
 app.include_router(feed_router)
 app.include_router(recommendations_router)

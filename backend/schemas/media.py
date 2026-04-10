@@ -2,7 +2,7 @@
 
 Defines enums for media types and statuses, and Pydantic models for
 creating, updating, filtering, and serializing media items. Also includes
-schemas for pagination, statistics, export/import, and error responses.
+schemas for pagination, statistics, and error responses.
 """
 
 from __future__ import annotations
@@ -153,32 +153,6 @@ class CatalogStats(BaseModel):
     by_type: dict[str, int]
     by_status: dict[str, int]
     avg_rating_by_type: dict[str, float | None]
-
-
-class ExportData(BaseModel):
-    """Schema for catalog export payload.
-
-    Attributes:
-        version: Export format version.
-        exported_at: Timestamp of the export.
-        items: List of all media items.
-    """
-
-    version: str = "1.0"
-    exported_at: datetime
-    items: list[MediaResponse]
-
-
-class ImportResult(BaseModel):
-    """Schema for catalog import result.
-
-    Attributes:
-        created: Number of items successfully created.
-        errors: List of error messages for failed items.
-    """
-
-    created: int
-    errors: list[str]
 
 
 class StatusUpdate(BaseModel):

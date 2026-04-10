@@ -167,17 +167,4 @@ export function getStats() {
   return request('/stats', { method: 'GET' })
 }
 
-// ── Export / Import ─────────────────────────────────────────
 
-/** Export the entire catalog as JSON. */
-export function exportCatalog() {
-  return request('/export', { method: 'GET' })
-}
-
-/** Import catalog from a JSON payload. */
-export function importCatalog(data) {
-  return request('/import', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  })
-}

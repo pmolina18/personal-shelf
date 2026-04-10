@@ -3,7 +3,7 @@
 Each tool delegates to the corresponding service layer method, ensuring
 the same validation and business rules as the REST API.
 
-Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7, 11.8, 11.9, 11.10, 11.11, 11.12
+Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7, 11.8, 11.9, 11.10
 """
 
 from __future__ import annotations
@@ -18,7 +18,6 @@ from backend.schemas.media import (
     MediaType,
     MediaUpdate,
 )
-from backend.services.export_service import ExportService
 from backend.services.media_service import MediaService
 from backend.services.stats_service import StatsService
 
@@ -26,7 +25,6 @@ mcp_server = FastMCP("media-tracker")
 
 _media_service = MediaService()
 _stats_service = StatsService()
-_export_service = ExportService()
 
 
 @mcp_server.tool(
@@ -275,46 +273,6 @@ async def get_stats() -> dict:
     try:
         async with async_session() as session:
             result = await _stats_service.get_stats(session, user_id=1)
-            return result.model_dump(mode="json")
-    except Exception as exc:
-        return _format_error(exc)
-
-
-@mcp_server.tool(
-    name="export_catalog",
-    description="Export the entire media catalog as JSON. "
-    "Returns all items with their data including image URLs.",
-)
-async def export_catalog() -> dict:
-    """Export all media items as a JSON-serializable dict.
-
-    Returns:
-        Export data with version, timestamp, and all items.
-    """
-    try:
-        async with async_session() as session:
-            return await _export_service.export_catalog(session, user_id=1)
-    except Exception as exc:
-        return _format_error(exc)
-
-
-@mcp_server.tool(
-    name="import_catalog",
-    description="Import media items from a JSON payload. "
-    "Expects a dict with 'version', 'exported_at', and 'items' fields.",
-)
-async def import_catalog(data: dict) -> dict:
-    """Import media items from a previously exported JSON payload.
-
-    Args:
-        data: A dict matching the ExportData schema.
-
-    Returns:
-        Import result with created count and any errors.
-    """
-    try:
-        async with async_session() as session:
-            result = await _export_service.import_catalog(session, data, user_id=1)
             return result.model_dump(mode="json")
     except Exception as exc:
         return _format_error(exc)

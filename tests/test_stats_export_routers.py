@@ -1,4 +1,4 @@
-"""Unit tests for stats, export/import, and image router endpoints."""
+"""Unit tests for stats and image router endpoints."""
 
 import pytest
 import pytest_asyncio
@@ -58,11 +58,10 @@ async def client(engine):
     app.dependency_overrides[get_current_user] = _override_user
 
     # Register routers (idempotent — FastAPI deduplicates)
-    from backend.routers.export_import import router as export_router
     from backend.routers.media import router as media_router
     from backend.routers.stats import router as stats_router
 
-    for r in (media_router, stats_router, export_router):
+    for r in (media_router, stats_router):
         if r not in app.router.routes:
             app.include_router(r)
 
@@ -98,62 +97,6 @@ async def test_stats_with_items(client):
     assert body["by_type"]["movie"] == 1
     assert body["by_type"]["book"] == 1
     assert body["by_status"]["pending"] == 2
-
-
-# ── GET /api/export ──────────────────────────────────────────────────
-
-
-@pytest.mark.asyncio
-async def test_export_empty_catalog(client):
-    """Exporting an empty catalog returns version and empty items."""
-    resp = await client.get("/api/export")
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["version"] == "1.0"
-    assert body["items"] == []
-
-
-@pytest.mark.asyncio
-async def test_export_includes_items(client):
-    """Exported JSON contains all created items."""
-    await client.post("/api/media", json={"title": "X", "media_type": "movie"})
-    await client.post("/api/media", json={"title": "Y", "media_type": "series"})
-
-    resp = await client.get("/api/export")
-    assert resp.status_code == 200
-    body = resp.json()
-    assert len(body["items"]) == 2
-
-
-# ── POST /api/import ─────────────────────────────────────────────────
-
-
-@pytest.mark.asyncio
-async def test_import_round_trip(client):
-    """Exporting then importing recreates items."""
-    await client.post("/api/media", json={"title": "RT", "media_type": "book"})
-
-    export_resp = await client.get("/api/export")
-    export_data = export_resp.json()
-
-    # Delete the original
-    items_resp = await client.get("/api/media")
-    for item in items_resp.json()["items"]:
-        await client.delete(f"/api/media/{item['id']}")
-
-    # Import
-    import_resp = await client.post("/api/import", json=export_data)
-    assert import_resp.status_code == 200
-    body = import_resp.json()
-    assert body["created"] == 1
-    assert body["errors"] == []
-
-
-@pytest.mark.asyncio
-async def test_import_invalid_format(client):
-    """Importing malformed JSON returns 400."""
-    resp = await client.post("/api/import", json={"bad": "data"})
-    assert resp.status_code == 400
 
 
 # ── GET /api/media/{id}/image ────────────────────────────────────────

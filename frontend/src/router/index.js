@@ -3,7 +3,6 @@ import { createRouter, createWebHistory } from 'vue-router'
 const CatalogView = () => import('../views/CatalogView.vue')
 const MediaDetailView = () => import('../views/MediaDetailView.vue')
 const StatsView = () => import('../views/StatsView.vue')
-const ImportExportView = () => import('../views/ImportExportView.vue')
 const LoginView = () => import('../views/LoginView.vue')
 const RegisterView = () => import('../views/RegisterView.vue')
 const FeedView = () => import('../views/FeedView.vue')
@@ -22,7 +21,6 @@ const routes = [
   { path: '/media/new', name: 'media-create', component: MediaDetailView },
   { path: '/media/:id', name: 'media-detail', component: MediaDetailView },
   { path: '/stats', name: 'stats', component: StatsView },
-  { path: '/import-export', name: 'import-export', component: ImportExportView },
   { path: '/feed', name: 'feed', component: FeedView },
   { path: '/explore', name: 'explore', component: ExploreView },
   { path: '/friends', name: 'friends', component: FriendsView },

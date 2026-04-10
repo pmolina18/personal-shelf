@@ -73,10 +73,11 @@ Cada idea sigue este formato:
 
 ---
 
-## [IDEA-6] Eliminar funcionalidad de Import/Export
+## [IDEA-6] Eliminar funcionalidad de Import/Export ✅ COMPLETADA
 
 - Tipo: mejora
 - Prioridad: media
+- Estado: Implementada el 2026-04-10. Eliminados: ExportService, router export_import, ImportExportView, schemas ExportData/ImportResult, funciones API frontend, enlace sidebar, herramientas MCP export/import, y todos los tests asociados.
 - Descripción: Quitar completamente la funcionalidad de import/export del catálogo. No tiene sentido en el contexto actual de la app como red social. Incluye eliminar: backend (ExportService, endpoints en stats_export router), frontend (ImportExportView, ruta, enlace en sidebar), schemas (ExportData, ImportResult), y tests asociados.
 - Contexto: Archivos afectados: `backend/services/export_service.py`, `backend/routers/stats_export.py` (endpoints de export/import), `frontend/src/views/ImportExportView.vue`, `frontend/src/api/media.js` (funciones exportCatalog/importCatalog), router, App.vue (sidebar link). También tests en `tests/` y `frontend/src/__tests__/`.
 - Notas: Es una limpieza — eliminar código muerto simplifica el mantenimiento. Hacer una migración Alembic no es necesario ya que no hay cambios en el modelo de datos.

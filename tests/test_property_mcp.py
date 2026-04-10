@@ -264,23 +264,6 @@ def test_mcp_stats_consistent_with_catalog(args):
     asyncio.run(_with_fresh_db(_test))
 
 
-@settings(max_examples=100, deadline=None)
-@given(args=valid_media_create_args)
-def test_mcp_export_contains_created_items(args):
-    """MCP export_catalog must include items created via MCP."""
-
-    async def _test():
-        created = _parse_mcp_result(await mcp_server.call_tool("create_media", args))
-        if "error" in created:
-            return
-        exported = _parse_mcp_result(await mcp_server.call_tool("export_catalog", {}))
-        assert "items" in exported
-        assert len(exported["items"]) >= 1
-        assert created["title"] in [item["title"] for item in exported["items"]]
-
-    asyncio.run(_with_fresh_db(_test))
-
-
 # -- Property 13: MCP rejects invalid parameters with descriptive message ------
 
 
