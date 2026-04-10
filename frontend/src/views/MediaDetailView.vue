@@ -137,9 +137,34 @@
 
         <!-- Main -->
         <div class="detail-main">
-          <h1 class="page-title">
-            {{ currentItem.title }}
-          </h1>
+          <div class="detail-title-row">
+            <h1 class="page-title">
+              {{ currentItem.title }}
+            </h1>
+            <button
+              type="button"
+              class="btn-recommend"
+              aria-label="Recomendar este item a un amigo"
+              @click="showRecommendModal = true"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              ><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><polyline points="16 6 12 2 8 6" /><line
+                x1="12"
+                y1="2"
+                x2="12"
+                y2="15"
+              /></svg>
+              Recomendar
+            </button>
+          </div>
 
           <div class="card">
             <MediaForm
@@ -199,6 +224,14 @@
             @confirm="onDelete"
             @cancel="showConfirm = false"
           />
+
+          <RecommendModal
+            :media-item-id="currentItem.id"
+            :media-title="currentItem.title"
+            :show="showRecommendModal"
+            @close="showRecommendModal = false"
+            @sent="showRecommendModal = false"
+          />
         </div>
       </div>
     </template>
@@ -214,6 +247,7 @@ import MediaForm from '../components/MediaForm.vue'
 import TagInput from '../components/TagInput.vue'
 import RatingInput from '../components/RatingInput.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
+import RecommendModal from '../components/RecommendModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -225,6 +259,7 @@ const {
 
 const isCreate = computed(() => route.name === 'media-create')
 const showConfirm = ref(false)
+const showRecommendModal = ref(false)
 
 const statusLabels = { pending: 'Pending', in_progress: 'In Progress', completed: 'Completed' }
 const statusLabel = computed(() => statusLabels[currentItem.value?.status] || '')
@@ -302,6 +337,49 @@ onMounted(() => {
   color: var(--color-text);
   margin-bottom: 1.25rem;
   line-height: 1.25;
+}
+
+.detail-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.detail-title-row .page-title {
+  margin-bottom: 0;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn-recommend {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.85rem;
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary-light);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+
+.btn-recommend:hover {
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+}
+
+.btn-recommend:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 /* Grid */

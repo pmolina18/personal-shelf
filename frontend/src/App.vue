@@ -192,6 +192,35 @@
             >Friends</span>
           </Transition>
         </router-link>
+        <router-link
+          v-if="isAuthenticated"
+          to="/recommendations"
+          class="nav-item"
+          :title="collapsed ? 'Recommendations' : undefined"
+          @click="mobileOpen = false"
+        >
+          <svg
+            class="nav-icon"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          ><path d="M20 12v10H4V12" /><path d="M2 7h20v5H2z" /><path d="M12 22V7" /><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" /><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" /></svg>
+          <Transition name="fade-text">
+            <span
+              v-if="!collapsed"
+              class="nav-label"
+            >Recommendations</span>
+          </Transition>
+          <span
+            v-if="unreadCount > 0"
+            class="nav-badge"
+          >{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+        </router-link>
       </nav>
 
       <div class="sidebar-bottom">
@@ -307,15 +336,38 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from './composables/useAuth.js'
+import { getUnreadCount } from './api/recommendations.js'
 
 const router = useRouter()
 const { user, isAuthenticated, logout } = useAuth()
 
 const collapsed = ref(false)
 const mobileOpen = ref(false)
+const unreadCount = ref(0)
+let pollInterval = null
+
+async function fetchCount() {
+  try {
+    const data = await getUnreadCount()
+    unreadCount.value = data.count
+  } catch {
+    // Silenciar errores de polling
+  }
+}
+
+onMounted(() => {
+  if (isAuthenticated.value) {
+    fetchCount()
+    pollInterval = setInterval(fetchCount, 60000)
+  }
+})
+
+onUnmounted(() => {
+  if (pollInterval) clearInterval(pollInterval)
+})
 
 function onLogout() {
   logout()
@@ -506,7 +558,6 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; }
   font-size: 0.87rem;
   font-weight: 500;
   transition: all var(--transition-fast);
-  overflow: hidden;
   white-space: nowrap;
 }
 
@@ -596,6 +647,22 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; }
   height: 1px;
   background: rgba(255, 255, 255, 0.06);
   margin: 0.35rem 0.7rem;
+}
+
+.nav-badge {
+  background: var(--color-primary);
+  color: #ffffff;
+  border-radius: var(--radius-full);
+  font-size: 0.65rem;
+  font-weight: 700;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.3rem;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .sidebar-version {

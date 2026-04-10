@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from backend.config import DATABASE_URL, is_neon_db  # noqa: E402
 from backend.models.media import Base  # noqa: E402
+import backend.models.recommendation  # noqa: E402, F401
 
 config = context.config
 

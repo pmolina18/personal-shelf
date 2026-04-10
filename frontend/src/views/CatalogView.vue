@@ -91,6 +91,7 @@
           v-for="item in items"
           :key="item.id"
           :item="item"
+          @recommend="onRecommend"
         />
       </div>
       <Pagination
@@ -100,18 +101,35 @@
         @update:page="onPageChange"
       />
     </template>
+
+    <RecommendModal
+      v-if="recommendItem"
+      :media-item-id="recommendItem.id"
+      :media-title="recommendItem.title"
+      :show="showRecommendModal"
+      @close="showRecommendModal = false; recommendItem = null"
+      @sent="showRecommendModal = false; recommendItem = null"
+    />
   </section>
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useMedia } from '../composables/useMedia.js'
 import FilterBar from '../components/FilterBar.vue'
 import MediaCard from '../components/MediaCard.vue'
 import Pagination from '../components/Pagination.vue'
+import RecommendModal from '../components/RecommendModal.vue'
 
 const { items, total, page, pages, loading, error, hasActiveFilters, fetchMedia, setFilters, setPage } = useMedia()
 
+const showRecommendModal = ref(false)
+const recommendItem = ref(null)
+
+function onRecommend(item) {
+  recommendItem.value = item
+  showRecommendModal.value = true
+}
 function onFiltersChange(newFilters) { setFilters(newFilters) }
 function onPageChange(newPage) { setPage(newPage) }
 onMounted(() => fetchMedia())

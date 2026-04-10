@@ -1,5 +1,28 @@
 <template>
   <article class="media-card">
+    <button
+      type="button"
+      class="card-recommend-btn"
+      :aria-label="`Recomendar ${item.title} a un amigo`"
+      title="Recomendar"
+      @click.stop="emit('recommend', item)"
+    >
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      ><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><polyline points="16 6 12 2 8 6" /><line
+        x1="12"
+        y1="2"
+        x2="12"
+        y2="15"
+      /></svg>
+    </button>
     <router-link
       :to="`/media/${item.id}`"
       class="card-link"
@@ -62,6 +85,8 @@
 import { computed } from 'vue'
 import { resolveImageUrl } from '../api/media.js'
 
+const emit = defineEmits(['recommend'])
+
 const props = defineProps({
   item: {
     type: Object,
@@ -94,6 +119,7 @@ const imageUrl = computed(() => {
   box-shadow: var(--shadow-card);
   border: 1px solid var(--color-border-light);
   transition: transform var(--transition-base), box-shadow var(--transition-base);
+  position: relative;
 }
 
 .media-card:hover {
@@ -225,5 +251,42 @@ const imageUrl = computed(() => {
 .mini-tag--more {
   background: var(--color-border-light);
   color: var(--color-text-muted);
+}
+
+.card-recommend-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: none;
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+}
+
+.media-card:hover .card-recommend-btn {
+  opacity: 1;
+}
+
+.card-recommend-btn:hover {
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+}
+
+.card-recommend-btn:focus-visible {
+  opacity: 1;
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
 }
 </style>
