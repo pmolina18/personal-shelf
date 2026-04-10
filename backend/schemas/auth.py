@@ -4,6 +4,8 @@ Defines models for user registration, login, token management,
 and user serialization in API responses.
 """
 
+from __future__ import annotations
+
 from pydantic import BaseModel, Field
 
 
@@ -81,3 +83,25 @@ class TokenPairResponse(BaseModel):
 
     access_token: str
     refresh_token: str
+
+
+class AccessRequest(BaseModel):
+    """Schema for requesting access to the application.
+
+    Attributes:
+        email: Valid email address of the requester.
+    """
+
+    email: str = Field(..., pattern=r"^[^@]+@[^@]+\.[^@]+$")
+
+
+class AccessRequestResponse(BaseModel):
+    """Schema for access request response.
+
+    Attributes:
+        message: Confirmation or status message.
+        pr_url: URL of the created GitHub Pull Request, if applicable.
+    """
+
+    message: str
+    pr_url: str | None = None

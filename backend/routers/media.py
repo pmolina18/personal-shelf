@@ -65,6 +65,15 @@ async def search_metadata(
     return await _metadata_service.search(title, media_type.value)
 
 
+@router.get("/tags", response_model=list[str])
+async def list_tags(
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
+) -> list[str]:
+    """Return all unique tag names for the current user's items."""
+    return await _media_service.list_tags(session, user_id=user.id)
+
+
 # --- Task 3.2: create_media with metadata autofill ---
 
 
@@ -139,8 +148,34 @@ async def get_media(
     session: AsyncSession = Depends(get_session),
     user: User = Depends(get_current_user),
 ) -> MediaResponse:
-    """Fetch a single media item by ID."""
-    return await _media_service.get(session, media_id, user_id=user.id)
+    """Fetch a single media item by ID.
+
+    If the item has no tags, automatically fetches genre tags from
+    external metadata APIs and assigns them.
+    """
+    item = await session.get(MediaItem, media_id)
+    if item is None:
+        raise HTTPException(status_code=404, detail="Item not found")
+    if item.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Auto-assign genre tags if item has none
+    if not item.tags:
+        try:
+            candidates = await _metadata_service.search(
+                item.title, item.media_type,
+            )
+            if candidates and candidates[0].genres:
+                tags = await _media_service._get_or_create_tags(
+                    session, candidates[0].genres,
+                )
+                item.tags = tags
+                await session.commit()
+                await session.refresh(item)
+        except Exception:
+            logger.exception("Genre autofill failed for item %s", media_id)
+
+    return _to_response(item)
 
 
 # --- Task 4.1: update_media with metadata autofill on title/type change ---

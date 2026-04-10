@@ -3,6 +3,10 @@
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 # Database
 DATABASE_URL: str = os.getenv(
     "DATABASE_URL",
@@ -31,3 +35,11 @@ JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "super-secret-dev-key-change-i
 JWT_ALGORITHM: str = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+
+# Allowed users
+ALLOWED_USERS_PATH: Path = BASE_DIR.parent / "allowed_users"
+
+# GitHub integration
+GITHUB_TOKEN: str = os.getenv("GITHUB_TOKEN", "")
+GITHUB_REPO: str = os.getenv("GITHUB_REPO", "")
+GITHUB_DEFAULT_BRANCH: str = os.getenv("GITHUB_DEFAULT_BRANCH", "main")

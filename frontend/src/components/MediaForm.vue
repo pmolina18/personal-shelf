@@ -58,6 +58,10 @@
             <span v-if="s.year && s.creator"> — </span>
             <span v-if="s.creator">{{ s.creator }}</span>
           </span>
+          <span
+            v-if="s.genres && s.genres.length"
+            class="suggestions-list__genres"
+          >{{ s.genres.slice(0, 3).join(', ') }}</span>
         </li>
       </ul>
       <p
@@ -153,7 +157,7 @@
           /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
           <input
             id="mf-year"
-            v-model.number="form.year"
+            v-model="form.year"
             type="number"
             placeholder="2024"
           >
@@ -250,9 +254,10 @@ const emit = defineEmits(['submit'])
 const form = reactive({
   title: '',
   media_type: '',
-  year: null,
+  year: '',
   creator: '',
   notes: '',
+  _genres: [],
 })
 
 const errors = reactive({ title: '' })
@@ -308,9 +313,11 @@ watch(() => form.media_type, () => {
 })
 
 function selectSuggestion(s) {
+  if (s.title) form.title = s.title
   if (s.year != null) form.year = s.year
   if (s.creator) form.creator = s.creator
   if (s.description) form.notes = s.description
+  if (s.genres && s.genres.length) form._genres = s.genres
   suggestions.value = []
   showSuggestions.value = false
 }
@@ -339,7 +346,7 @@ function populate(data) {
   if (!data) return
   form.title = data.title || ''
   form.media_type = data.media_type || ''
-  form.year = data.year ?? null
+  form.year = data.year != null ? data.year : ''
   form.creator = data.creator || ''
   form.notes = data.notes || ''
 }
@@ -355,9 +362,10 @@ function onSubmit() {
   emit('submit', {
     title: form.title.trim(),
     media_type: form.media_type,
-    year: form.year || null,
+    year: form.year ? Number(form.year) : null,
     creator: form.creator.trim() || null,
     notes: form.notes.trim() || null,
+    tags: form._genres.length ? [...form._genres] : undefined,
   })
 }
 </script>
@@ -535,6 +543,12 @@ function onSubmit() {
 .suggestions-list__meta {
   font-size: 0.75rem;
   color: var(--color-text-muted);
+}
+
+.suggestions-list__genres {
+  font-size: 0.7rem;
+  color: var(--color-primary);
+  font-style: italic;
 }
 
 /* Submit */

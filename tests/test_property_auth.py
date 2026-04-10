@@ -42,6 +42,25 @@ from backend.services.auth_service import AuthService
 
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 
+# Patch AllowedUsersService.is_allowed to always return True for all property tests
+# that call AuthService.register() — the allowed-users gate is tested separately.
+_original_is_allowed = None
+
+
+def _always_allowed(self, email):
+    return True
+
+
+@pytest.fixture(autouse=True)
+def _bypass_allowed_users():
+    """Bypass the allowed-users check for all auth property tests."""
+    from backend.services.allowed_users_service import AllowedUsersService
+
+    original = AllowedUsersService.is_allowed
+    AllowedUsersService.is_allowed = _always_allowed
+    yield
+    AllowedUsersService.is_allowed = original
+
 
 async def _fresh_session():
     """Create a throwaway in-memory DB and yield a session."""

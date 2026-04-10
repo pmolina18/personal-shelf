@@ -26,6 +26,29 @@ class MetadataService:
     listas de MetadataCandidate que el router o MediaService consume.
     """
 
+    def __init__(self) -> None:
+        self._tmdb_genre_cache: dict[str, dict[int, str]] = {}
+
+    async def _get_tmdb_genres(self, tmdb_type: str) -> dict[int, str]:
+        """Obtiene y cachea el mapa id→nombre de géneros de TMDB."""
+        if tmdb_type in self._tmdb_genre_cache:
+            return self._tmdb_genre_cache[tmdb_type]
+
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.get(
+                    f"https://api.themoviedb.org/3/genre/{tmdb_type}/list",
+                    params={"api_key": TMDB_API_KEY},
+                )
+                resp.raise_for_status()
+                data = resp.json()
+            genre_map = {g["id"]: g["name"] for g in data.get("genres", [])}
+            self._tmdb_genre_cache[tmdb_type] = genre_map
+            return genre_map
+        except Exception:
+            logger.exception("Failed to fetch TMDB genre list for %s", tmdb_type)
+            return {}
+
     async def search(self, title: str, media_type: str) -> list[MetadataCandidate]:
         """Busca candidatos de metadatos para un título y tipo.
 
@@ -127,12 +150,18 @@ class MetadataService:
         # Creador: director para movies (vía credits), created_by para series
         creator = await self._get_tmdb_creator(item, tmdb_type)
 
+        # Géneros: resolver IDs a nombres
+        genre_ids = item.get("genre_ids") or []
+        genre_map = await self._get_tmdb_genres(tmdb_type)
+        genres = [genre_map[gid] for gid in genre_ids if gid in genre_map]
+
         return MetadataCandidate(
             title=candidate_title,
             year=year,
             creator=creator,
             description=description,
             image_url=image_url,
+            genres=genres,
         )
 
     async def _get_tmdb_creator(self, item: dict, tmdb_type: str) -> str | None:
@@ -194,7 +223,11 @@ class MetadataService:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 resp = await client.get(
                     "https://openlibrary.org/search.json",
-                    params={"title": title, "limit": _MAX_CANDIDATES},
+                    params={
+                        "q": title,
+                        "limit": _MAX_CANDIDATES,
+                        "fields": "title,first_publish_year,author_name,subject,cover_i",
+                    },
                 )
                 resp.raise_for_status()
                 data = resp.json()
@@ -215,9 +248,16 @@ class MetadataService:
                 author_names = doc.get("author_name") or []
                 creator = author_names[0] if author_names else None
 
-                # Descripción: primer elemento de subject
+                # Géneros: filtrar subjects útiles (excluir series:, nyt:, place:, time:)
                 subjects = doc.get("subject") or []
-                description = subjects[0] if subjects else None
+                genres = [
+                    s for s in subjects[:10]
+                    if not s.startswith(("series:", "nyt:", "place:", "time:"))
+                    and len(s) < 40
+                ][:5]
+
+                # Descripción: primer género limpio, o None
+                description = genres[0] if genres else None
 
                 # Imagen de portada
                 cover_id = doc.get("cover_i")
@@ -234,6 +274,7 @@ class MetadataService:
                         creator=creator,
                         description=description,
                         image_url=image_url,
+                        genres=genres,
                     )
                 )
 

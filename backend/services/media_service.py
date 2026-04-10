@@ -145,7 +145,7 @@ class MediaService:
             query = query.where(MediaItem.title.ilike(f"%{filters.search}%"))
 
         if filters.tag:
-            query = query.join(MediaItem.tags).where(Tag.name == filters.tag)
+            query = query.join(MediaItem.tags).where(Tag.name.ilike(f"%{filters.tag}%"))
 
         # Count total matching items
         count_query = select(func.count()).select_from(query.subquery())
@@ -357,6 +357,31 @@ class MediaService:
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    async def list_tags(
+        self, session: AsyncSession, user_id: int
+    ) -> list[str]:
+        """Return all unique tag names used by the user's media items.
+
+        Args:
+            session: The async database session.
+            user_id: Owner user ID.
+
+        Returns:
+            Sorted list of unique tag name strings.
+        """
+        from backend.models.media import media_tags
+
+        query = (
+            select(Tag.name)
+            .join(media_tags, Tag.id == media_tags.c.tag_id)
+            .join(MediaItem, MediaItem.id == media_tags.c.media_id)
+            .where(MediaItem.user_id == user_id)
+            .distinct()
+            .order_by(Tag.name)
+        )
+        result = await session.execute(query)
+        return [row[0] for row in result.all()]
 
     async def _get_or_create_tags(
         self, session: AsyncSession, tag_names: list[str]

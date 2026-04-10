@@ -123,6 +123,11 @@ export function searchMetadata(title, mediaType) {
   return request(`/media/metadata-search?${params}`)
 }
 
+/** Get all unique tags for the current user. */
+export function listTags() {
+  return request('/media/tags')
+}
+
 // ── Image ───────────────────────────────────────────────────
 
 /** Get the image URL for a media item. */

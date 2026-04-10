@@ -501,3 +501,111 @@
 - Observation: Existing patterns held. Splitting ~50 pending changes (modified + untracked) into 9 logical commits worked cleanly with sequential `git add <specific files>` + `git commit`. The grouping order followed the established pattern: chore (env/gitignore) → feat (deployment infra) → feat (frontend URLs) → feat (backend metadata) → feat (frontend metadata UI) → fix (sidebar tweak) → test → chore (images) → chore (specs/docs). Reading all diffs upfront via `git diff <file>` before starting commits was essential to plan the grouping correctly — without it, related changes across backend/frontend would have been split incorrectly. Binary files (jpg images) were committed separately since they don't mix well with code diffs. The `git status --short` check between commits confirmed correct staging each time. No new issues discovered.
 - Action: When committing accumulated work spanning multiple features, read all diffs first to map changes to functional groups before starting any commits. Keep binary assets in their own commit. Continue using conventional commit prefixes (`feat`, `fix`, `test`, `chore`) for clear history.
 - Confidence: high
+
+**[2026-04-09] — Session: IDEAS.md review and feedback**
+- Observation: Existing patterns held. Reading `learnings.md` (500+ lines) and `IDEAS.md` in a single `readMultipleFiles` call with `skipPruning=true` hit the truncation limit on learnings — the file is now large enough that it gets cut off around line 212. The IDEAS review itself was straightforward: two well-structured ideas with clear context. No new technical patterns discovered — the session was purely advisory (no code changes, no tool failures, no new infrastructure).
+- Action: The `learnings.md` file is approaching a size where it should be considered for archival/rotation — older entries (e.g., initial scaffolding, environment setup from 2026-04-07) could be moved to a `learnings-archive.md` to keep the active file under the truncation threshold. For now, reading with `start_line` offsets works as a workaround.
+- Confidence: medium
+
+**[2026-04-09] — Spec creation: allowed-users requirements document**
+- Observation: Existing patterns held. The spec orchestrator workflow (spec type → workflow selection → subagent delegation) worked smoothly for creating a requirements-first feature spec from an IDEAS.md entry. Reading all auth-related context files (auth_service, auth router, schemas, models, config, dependencies, frontend views, API client, render.yaml) upfront and passing them as `contextFiles` gave the subagent enough context to produce a complete 7-requirement document in Spanish. The context-gatherer subagent was invoked in parallel with direct file reads — both completed without issues. No new technical patterns discovered.
+- Action: When converting IDEAS.md entries to specs, include the discussion notes/considerations from the chat as additional context in the subagent prompt — this ensures the spec reflects decisions already made with the user (e.g., PR vs issue, validation at registration not login).
+- Confidence: high
+
+**[2026-04-09] — Spec creation: allowed-users design document**
+- Observation: Existing patterns held. The design phase subagent produced a complete design document with architecture diagram (Mermaid sequence), component interfaces, data models, 8 correctness properties, error handling table, and testing strategy — all in Spanish. Passing the approved requirements.md as a contextFile alongside the existing auth system files gave the subagent enough context to produce a coherent design without follow-up questions. The design correctly followed project conventions: async services, httpx for external API calls, Hypothesis property tests with sync def + asyncio.run() pattern. No new technical issues discovered.
+- Action: No changes needed. The two-phase subagent delegation (requirements → design) with contextFiles works reliably for feature specs.
+- Confidence: high
+
+
+**[2026-04-09] — Session: dev server startup**
+- Observation: Existing patterns held. PostgreSQL via Postgres.app was already running (`pg_isready -h localhost` confirmed). Backend started with `python -m uvicorn backend.main:app --reload --port 8000` and frontend with `npm run dev` from `frontend/`. Both servers started without issues. No new patterns discovered.
+- Action: No changes needed. Existing patterns confirmed.
+- Confidence: high
+
+**[2026-04-09] — Spec creation: allowed-users tasks document**
+- Observation: Existing patterns held. The three-phase spec workflow (requirements → design → tasks) completed smoothly for the allowed-users feature. The tasks subagent produced a well-structured plan with 10 tasks, 3 checkpoints, and all 8 correctness properties mapped as optional sub-tasks. Passing both requirements.md and design.md as contextFiles alongside the existing codebase files gave the subagent enough context to produce accurate task breakdowns with correct file paths and requirement traceability. No new technical issues discovered.
+- Action: No changes needed. The full spec creation pipeline (requirements → design → tasks) with subagent delegation and contextFiles works reliably end-to-end.
+- Confidence: high
+
+
+**[2026-04-09] — Debugging: TMDB metadata autofill returning empty results**
+- Observation: The metadata autofill feature returned `[]` for all movie/series searches because `TMDB_API_KEY` was not set in the environment. Two issues compounded: (1) No `.env` file existed, and `config.py` used `os.getenv("TMDB_API_KEY", "")` which silently defaults to empty string — the `MetadataService` then returns `[]` without logging a warning. (2) The user provided a TMDB v4 JWT token, but the service uses the v3 API which requires a short hex key (e.g., `28d02da58241de84e6777f0d5b4ff2e4`). The v3 key can be extracted from the JWT's `aud` claim. Additionally, `config.py` did not load `.env` — added `python-dotenv` with `load_dotenv()` at the top of `config.py`. After updating `.env`, uvicorn's `--reload` did NOT pick up the change because it only watches `.py` files, not `.env` — a full restart was required.
+- Action: When TMDB metadata returns empty, first check `TMDB_API_KEY` is set and is the v3 key (32-char hex), not the v4 JWT. The v3 key is in the JWT's `aud` field. Always add `python-dotenv` + `load_dotenv()` to projects that use environment variables for local dev. Remember that uvicorn `--reload` doesn't detect `.env` changes — restart the process manually after `.env` edits.
+- Confidence: high
+
+
+**[2026-04-09] — Frontend fix: v-model.number not updating input on programmatic assignment**
+- Observation: When `selectSuggestion()` assigned `form.year = s.year` (int from API), the `<input type="number" v-model.number="form.year">` did not visually update — the field stayed empty. The `creator` and `notes` fields (plain `v-model` on text inputs) populated correctly. The issue is a Vue 3 reactivity quirk: `v-model.number` on `type="number"` inputs can fail to reflect programmatic changes from `null` → number in the DOM, even though the reactive value updates internally.
+- Action: Avoid `v-model.number` on `<input type="number">` when the value may be set programmatically from `null`. Use plain `v-model` and convert to `Number()` in the submit handler instead (`year: form.year ? Number(form.year) : null`). This is more reliable for fields that get populated both by user typing and by programmatic assignment (e.g., autofill from API suggestions).
+- Confidence: high
+
+
+**[2026-04-09] — Frontend fix (v2): input type="number" with null initial value**
+- Observation: The previous fix (removing `v-model.number`) didn't resolve the year field not populating on suggestion selection. The root cause was deeper: `<input type="number">` with an initial reactive value of `null` doesn't reliably reflect programmatic changes to a number in the DOM. Changing the initial value from `null` to `''` (empty string) fixed it — the transition from `''` → `2021` is handled correctly by the input element, whereas `null` → `2021` was not. The `populate()` function for edit mode was also updated to convert `null` → `''` instead of keeping `null`.
+- Action: For `<input type="number">` bound with `v-model`, always initialize the reactive value as `''` (empty string), never `null`. Convert to `Number()` or `null` in the submit handler. This avoids DOM rendering issues with programmatic value assignment. The pattern is: `form.year = ''` (init) → `form.year = s.year` (autofill) → `Number(form.year) || null` (submit).
+- Confidence: high
+
+
+**[2026-04-09] — Session: metadata autofill informational query**
+- Observation: No new patterns. User asked about the data source for books — confirmed Open Library (`openlibrary.org/search.json`) works without API key, returning title, year, author, subject, and cover image. TMDB handles movies/series (requires key). Both APIs confirmed working via curl. Existing patterns held.
+- Action: No changes needed.
+- Confidence: high
+
+
+**[2026-04-09] — Backend fix: Open Library search parameter for multilingual titles**
+- Observation: The Open Library metadata search used `params={"title": title}` which only matches the exact title field. When users search in Spanish (e.g., "aprendiz de asesino"), it doesn't find the English-titled original ("Assassin's Apprentice" by Robin Hobb) because the `title` parameter only searches the primary title field. Changing to `params={"q": title}` uses Open Library's general search which covers titles, alternative editions, translations, and other metadata — returning the correct result as the first candidate.
+- Action: Always use the `q` parameter (general search) instead of `title` (exact title match) when querying Open Library's search API. This handles multilingual searches, alternative editions, and partial title matches much better. The `title` parameter is too restrictive for a user-facing autofill feature.
+- Confidence: high
+
+
+**[2026-04-09] — Frontend enhancement: update title on metadata suggestion selection**
+- Observation: Added `if (s.title) form.title = s.title` to `selectSuggestion()` so the title field updates to the canonical name from the API (e.g., "aprendiz de asesino" → "Assassin's Apprentice"). The title watcher triggers a new `scheduleFetch()` due to the value change, but since `showSuggestions` is set to `false` immediately after, the dropdown doesn't reappear — no UX issue. This works for all media types (movies, series, books).
+- Action: When implementing autocomplete that updates the search field on selection, ensure the dropdown is hidden before or simultaneously with the field update to prevent the watcher from re-showing suggestions. The current order (set title → clear suggestions → hide dropdown) works correctly because Vue batches reactive updates.
+- Confidence: high
+
+
+**[2026-04-09] — Feature: genre autofill from metadata APIs**
+- Observation: TMDB returns `genre_ids` (integer array) in search results, which must be resolved to names via a separate `/genre/{movie|tv}/list` endpoint. Caching the genre map in the service instance (`_tmdb_genre_cache`) avoids repeated calls. Open Library returns `subject` as a string array but only when explicitly requested via the `fields` query parameter — without it, subjects come back empty. Open Library subjects include noisy prefixed entries (`series:Harry_Potter`, `nyt:...`, `place:...`, `time:...`) that need filtering. The `description` field for books was previously set to the first raw subject (including prefixed ones like `series:Harry_Potter`), which was misleading — now it uses the first filtered genre instead.
+- Action: For TMDB genres, always cache the genre map per type (movie/tv) on the service instance to avoid redundant API calls. For Open Library, always pass `fields=title,first_publish_year,author_name,subject,cover_i` explicitly, and filter subjects by excluding prefixed entries and long strings (>40 chars). When using subjects as both genres and description source, apply the filter first, then pick description from the filtered list.
+- Confidence: high
+
+
+**[2026-04-09] — Frontend: genres as tags in create payload**
+- Observation: The `selectSuggestion` function stores genres in `form._genres` (underscore-prefixed to signal internal use), and `onSubmit` includes them as `tags` in the create payload when present (`tags: form._genres.length ? [...form._genres] : undefined`). The `MediaCreate` schema already accepts `tags: list[str]`, so no backend changes were needed for this part. For edit mode, `populate()` doesn't restore `_genres` — this is correct because tags are managed separately via `PUT /media/{id}/tags` in the detail view, not through the form submit. Sending `tags: undefined` in the payload is safe because `undefined` fields are stripped by `JSON.stringify`.
+- Action: When adding auto-populated fields to a form that serves both create and edit modes, use an underscore-prefixed field (`_genres`) to distinguish autofill data from user-editable fields. Only include it in the create payload, not in updates where the field is managed by a separate UI component (TagInput).
+- Confidence: high
+
+
+**[2026-04-09] — Feature: dynamic tag filter with autocomplete dropdown**
+- Observation: The tag filter was using exact match (`Tag.name == filters.tag`) which required typing the full tag name. Changed to `Tag.name.ilike(f"%{filters.tag}%")` for partial matching. Added a new `GET /api/media/tags` endpoint that returns all unique tag names for the user via a join through the `media_tags` association table. The association table column is `media_id` (not `media_item_id`) — this caused an `AttributeError` on first attempt. The frontend FilterBar was updated with a tag suggestions dropdown (same pattern as MediaForm's metadata suggestions): loads all tags on mount via `listTags()`, filters them client-side with a computed property, and selects on `@mousedown.prevent`. The `@focus` event opens the dropdown so users see available tags immediately.
+- Action: When querying through SQLAlchemy association tables, always verify column names against the model definition — naming conventions vary (`media_id` vs `media_item_id`). For autocomplete filters, load all options on mount (acceptable for small datasets like tags) and filter client-side with a computed property rather than making API calls on every keystroke. Use `@mousedown.prevent` on dropdown items to prevent blur race conditions.
+- Confidence: high
+
+
+**[2026-04-09] — Hooks: askAgent always opens a new session**
+- Observation: User reported that hooks with `askAgent` action open a new chat session every time they fire, which is disruptive. Investigated the hook schema and Kiro's behavior — there is no configuration option (`reuseSession`, `inlineExecution`, etc.) to make `askAgent` hooks run within the current session. This is a platform-level behavior, not a misconfiguration. Hooks with `runCommand` action do NOT open new sessions — they execute silently in the background and report results in the hooks panel. For the self-learning `promptSubmit` hook specifically, replacing it with a steering file (`inclusion: auto`) that contains the key instructions achieves the same goal without triggering a new session.
+- Action: To reduce unwanted new sessions: (1) prefer `runCommand` over `askAgent` when the hook doesn't need agent reasoning, (2) replace `promptSubmit` + `askAgent` hooks with `inclusion: auto` steering files when the goal is just loading context/instructions at session start, (3) accept that `askAgent` hooks will always open new sessions — this is a Kiro platform limitation, not configurable.
+- Confidence: high
+
+
+**[2026-04-09] — Hook optimization: replacing askAgent hooks with auto-inclusion steering**
+- Observation: The two self-learning hooks (`read-learnings` with `promptSubmit` + `askAgent`, and `update-learnings` with `agentStop` + `askAgent`) were opening new chat sessions every time they fired, which the user found disruptive. Replaced both with a single steering file (`self-learning.md`) using `inclusion: auto` — this injects the same read/update instructions into every session automatically without triggering new sessions. The steering file contains both the "on start" (read learnings) and "on end" (update learnings) instructions in one place. Deleted both `.kiro.hook` files after creating the steering replacement.
+- Action: When a hook's only purpose is injecting instructions/context into the agent (no external commands needed), prefer an `inclusion: auto` steering file over `askAgent` hooks. Steering files load silently into context without opening new sessions. Reserve `askAgent` hooks for cases where the agent truly needs to perform autonomous work triggered by an event, and there's no alternative.
+- Confidence: high
+
+
+**[2026-04-09] — Feature: lazy genre tag backfill on detail view**
+- Observation: Added auto-genre-tagging to `GET /api/media/{media_id}` — when an item has no tags, the endpoint fetches metadata candidates and assigns the first candidate's genres as tags before returning the response. This is a lazy backfill pattern: existing items get genre tags the first time they're opened in the detail view, and subsequent opens skip the search because `item.tags` is no longer empty. The router accesses `_media_service._get_or_create_tags()` directly (private method) which is pragmatic but slightly breaks encapsulation — acceptable for a router that already orchestrates multiple services. The metadata search adds ~1-2s latency on first detail load for untagged items, but only once per item.
+- Action: For lazy backfill of metadata on existing items, the detail endpoint is the right place — it runs once per item view and the latency is acceptable for a one-time operation. Wrap in try/except to ensure the item still loads even if the metadata API fails. Consider adding a bulk backfill management command if the one-at-a-time approach becomes too slow for large catalogs.
+- Confidence: high
+
+**[2026-04-09] — Task execution: allowed-users (all tasks)**
+- Observation: The fsWrite import pruning issue struck again — the subagent wrote `auth_service.py` with the `AllowedUsersService` import, but it was silently dropped because the import only appeared in a class-level attribute (`_allowed_users_service = AllowedUsersService()`), not at module scope. The fix was a manual `strReplace` to re-add the import. The first `strReplace` attempt caused duplicate lines because the `oldStr` matched a partial block — required a second fix pass. Additionally, existing property tests (`test_property_auth.py`) and router tests (`test_auth_router.py`) failed with 403 because the `allowed_users` file didn't exist yet. Fixed by: (1) creating the `allowed_users` file early (task 8 pulled forward), (2) patching `AllowedUsersService.is_allowed` to return True in test fixtures via `unittest.mock.patch` (router tests) and a class-level monkey-patch with `autouse=True` fixture (property tests).
+- Action: When adding a validation gate to an existing service method (like `register()`), immediately create the gate's data file AND update all existing tests that call that method. Don't wait for the "create file" task later in the plan — the tests will fail in between. For `strReplace`, always use unique multi-line context to avoid partial matches that cause duplicate lines. Continue using `mcp_filesystem_write_file` for files with many imports to avoid the pruning issue.
+- Confidence: high
+
+**[2026-04-09] — IDEAS.md lifecycle management**
+- Observation: After completing a spec and implementing all tasks, the corresponding IDEAS.md entry should be marked as completed to avoid re-processing it in future sessions. Adding a ✅ emoji, "COMPLETADA" label, a reference to the spec directory, and a completion date provides clear traceability.
+- Action: When finishing implementation of an idea from IDEAS.md, always update the entry with: completion marker (✅ COMPLETADA), spec path reference, and date. This prevents duplicate work and creates a paper trail from idea → spec → implementation.
+- Confidence: high

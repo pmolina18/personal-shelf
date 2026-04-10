@@ -68,3 +68,16 @@ export function refresh(refreshToken) {
     body: JSON.stringify({ refresh_token: refreshToken }),
   })
 }
+
+/**
+ * Request access when registration is denied.
+ * Creates a GitHub PR to add the email to the allowed users list.
+ * @param {string} email
+ * @returns {Promise<{ message: string, pr_url: string | null }>}
+ */
+export function requestAccess(email) {
+  return request('/auth/request-access', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  })
+}

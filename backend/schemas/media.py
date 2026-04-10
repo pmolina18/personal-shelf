@@ -230,6 +230,7 @@ class MetadataCandidate(BaseModel):
         creator: Director, autor o creador.
         description: Sinopsis o descripción.
         image_url: URL de imagen de portada.
+        genres: Lista de géneros o categorías.
     """
 
     title: str
@@ -237,3 +238,4 @@ class MetadataCandidate(BaseModel):
     creator: str | None = None
     description: str | None = None
     image_url: str | None = None
+    genres: list[str] = Field(default_factory=list)

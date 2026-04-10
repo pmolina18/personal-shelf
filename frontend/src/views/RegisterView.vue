@@ -93,6 +93,46 @@
         </button>
       </form>
 
+      <!-- Sección de acceso denegado (403) -->
+      <div
+        v-if="accessDenied"
+        class="access-denied-section"
+      >
+        <div
+          v-if="accessRequestSent"
+          class="access-denied-success"
+          role="status"
+        >
+          Tu solicitud de acceso ha sido enviada y está pendiente de aprobación.
+        </div>
+
+        <template v-else>
+          <div
+            class="auth-error"
+            role="alert"
+          >
+            {{ error }}
+          </div>
+
+          <button
+            type="button"
+            class="btn-request-access"
+            :disabled="requestingAccess"
+            @click="onRequestAccess"
+          >
+            {{ requestingAccess ? 'Solicitando...' : 'Solicitar acceso' }}
+          </button>
+
+          <div
+            v-if="accessRequestError"
+            class="access-request-error"
+            role="alert"
+          >
+            {{ accessRequestError }}
+          </div>
+        </template>
+      </div>
+
       <p class="auth-footer">
         Already have an account?
         <router-link to="/login">
@@ -107,6 +147,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '../composables/useAuth.js'
+import { requestAccess } from '../api/auth.js'
 
 const router = useRouter()
 const { register } = useAuth()
@@ -117,20 +158,43 @@ const password = ref('')
 const error = ref('')
 const submitting = ref(false)
 
+// Estado para flujo de acceso denegado (403)
+const accessDenied = ref(false)
+const requestingAccess = ref(false)
+const accessRequestSent = ref(false)
+const accessRequestError = ref('')
+
 async function onSubmit() {
   if (password.value.length < 8) {
     error.value = 'Password must be at least 8 characters'
     return
   }
   error.value = ''
+  accessDenied.value = false
   submitting.value = true
   try {
     await register(email.value, username.value, password.value)
     router.push('/')
   } catch (err) {
     error.value = err.message || 'Registration failed'
+    if (err.message && err.message.includes('No estás en la lista')) {
+      accessDenied.value = true
+    }
   } finally {
     submitting.value = false
+  }
+}
+
+async function onRequestAccess() {
+  requestingAccess.value = true
+  accessRequestError.value = ''
+  try {
+    await requestAccess(email.value)
+    accessRequestSent.value = true
+  } catch (err) {
+    accessRequestError.value = err.message
+  } finally {
+    requestingAccess.value = false
   }
 }
 </script>
@@ -267,5 +331,55 @@ async function onSubmit() {
 
 .auth-footer a:hover {
   color: var(--color-primary-hover);
+}
+
+.access-denied-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-sm);
+}
+
+.access-denied-success {
+  padding: 0.6rem 0.85rem;
+  background: #e8f5e9;
+  color: #2e7d32;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.btn-request-access {
+  padding: 0.6rem 1rem;
+  background: transparent;
+  color: var(--color-primary);
+  border: 1.5px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.btn-request-access:hover:not(:disabled) {
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+}
+
+.btn-request-access:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.access-request-error {
+  padding: 0.6rem 0.85rem;
+  background: #ffebee;
+  color: #c62828;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 500;
 }
 </style>

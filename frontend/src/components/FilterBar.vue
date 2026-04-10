@@ -161,7 +161,10 @@
       </div>
     </div>
 
-    <div class="filter-field">
+    <div
+      ref="tagFieldRef"
+      class="filter-field filter-field--tag"
+    >
       <label
         for="filter-tag"
         class="visually-hidden"
@@ -183,14 +186,19 @@
           v-model="tag"
           type="text"
           placeholder="Filter by tag…"
-          @input="emitFilters"
+          autocomplete="off"
+          :aria-expanded="showTagSuggestions && filteredTags.length > 0"
+          aria-autocomplete="list"
+          aria-controls="tag-suggestions"
+          @input="onTagInput"
+          @focus="onTagFocus"
         >
         <button
           v-if="tag"
           type="button"
           class="field-clear"
           aria-label="Clear tag filter"
-          @click="tag = ''; emitFilters()"
+          @click="tag = ''; showTagSuggestions = false; emitFilters()"
         >
           <svg
             width="14"
@@ -203,12 +211,30 @@
           ><path d="M18 6 6 18M6 6l12 12" /></svg>
         </button>
       </div>
+      <ul
+        v-if="showTagSuggestions && filteredTags.length"
+        id="tag-suggestions"
+        class="tag-suggestions"
+        role="listbox"
+        aria-label="Tag suggestions"
+      >
+        <li
+          v-for="t in filteredTags"
+          :key="t"
+          role="option"
+          class="tag-suggestions__item"
+          @mousedown.prevent="selectTag(t)"
+        >
+          {{ t }}
+        </li>
+      </ul>
     </div>
   </form>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { listTags } from '../api/media.js'
 
 const emit = defineEmits(['update:filters'])
 
@@ -216,6 +242,54 @@ const search = ref('')
 const mediaType = ref('')
 const status = ref('')
 const tag = ref('')
+
+const allTags = ref([])
+const showTagSuggestions = ref(false)
+const tagFieldRef = ref(null)
+
+const filteredTags = computed(() => {
+  const q = tag.value.toLowerCase().trim()
+  if (!q) return allTags.value
+  return allTags.value.filter(t => t.toLowerCase().includes(q))
+})
+
+async function loadTags() {
+  try {
+    allTags.value = await listTags()
+  } catch {
+    allTags.value = []
+  }
+}
+
+function selectTag(t) {
+  tag.value = t
+  showTagSuggestions.value = false
+  emitFilters()
+}
+
+function onTagInput() {
+  showTagSuggestions.value = true
+  emitFilters()
+}
+
+function onTagFocus() {
+  showTagSuggestions.value = true
+}
+
+function onClickOutsideTag(e) {
+  if (tagFieldRef.value && !tagFieldRef.value.contains(e.target)) {
+    showTagSuggestions.value = false
+  }
+}
+
+onMounted(() => {
+  loadTags()
+  document.addEventListener('mousedown', onClickOutsideTag)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('mousedown', onClickOutsideTag)
+})
 
 function emitFilters() {
   emit('update:filters', {
@@ -323,5 +397,38 @@ function emitFilters() {
 .field-clear:hover {
   color: var(--color-text);
   background: var(--color-border-light);
+}
+
+/* Tag suggestions dropdown */
+.filter-field--tag {
+  position: relative;
+}
+
+.tag-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  margin: 0.2rem 0 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  max-height: 12rem;
+  overflow-y: auto;
+}
+
+.tag-suggestions__item {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.tag-suggestions__item:hover {
+  background: var(--color-surface-hover);
 }
 </style>

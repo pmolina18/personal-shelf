@@ -25,6 +25,7 @@ from backend.schemas.auth import (
     UserRegister,
     UserResponse,
 )
+from backend.services.allowed_users_service import AllowedUsersService
 
 
 _pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -86,6 +87,8 @@ def _create_refresh_token(user_id: int) -> str:
 class AuthService:
     """Handles user registration, login, and token refresh."""
 
+    _allowed_users_service = AllowedUsersService()
+
     async def register(self, session: AsyncSession, data: UserRegister) -> TokenResponse:
         """Register a new user and return tokens.
 
@@ -99,6 +102,13 @@ class AuthService:
         Raises:
             HTTPException: 409 if email or username already exists.
         """
+        # Verificar que el email está en la lista de usuarios permitidos
+        if not self._allowed_users_service.is_allowed(data.email):
+            raise HTTPException(
+                status_code=403,
+                detail="No estás en la lista de usuarios permitidos. Solicita acceso para ser añadido.",
+            )
+
         # Check duplicate email
         result = await session.execute(select(User).where(User.email == data.email))
         if result.scalar_one_or_none() is not None:
