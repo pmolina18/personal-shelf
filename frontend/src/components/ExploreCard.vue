@@ -1,5 +1,5 @@
 <template>
-  <article class="explore-card">
+  <article :class="['explore-card', `type-${item.media_type}`]">
     <div class="explore-card__image">
       <img
         :src="imageUrl"
@@ -174,6 +174,10 @@ const imageUrl = computed(() => {
   transition: transform var(--transition-base), box-shadow var(--transition-base);
 }
 
+.explore-card.type-movie { border-color: var(--color-type-movie-border); }
+.explore-card.type-series { border-color: var(--color-type-series-border); }
+.explore-card.type-book { border-color: var(--color-type-book-border); }
+
 .explore-card:hover {
   transform: translateY(-6px);
   box-shadow: var(--shadow-lg);
@@ -201,6 +205,10 @@ const imageUrl = computed(() => {
 .explore-card__body {
   padding: 0.75rem 0.85rem 0.85rem;
 }
+
+.type-movie .explore-card__body { background: var(--color-type-movie-bg); }
+.type-series .explore-card__body { background: var(--color-type-series-bg); }
+.type-book .explore-card__body { background: var(--color-type-book-bg); }
 
 .explore-card__type {
   font-size: 0.68rem;

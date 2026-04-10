@@ -61,58 +61,65 @@ async def _existing_keys(session, user_id: int) -> set[tuple[str, str]]:
 
 
 async def _fetch_tmdb_movies() -> list[dict]:
-    """Fetch top-rated movies from TMDB (page 1, 20 results)."""
+    """Fetch top-rated movies from TMDB (pages 1-3, 60 results)."""
     if not TMDB_API_KEY:
         logger.warning("TMDB_API_KEY not set, skipping movies")
         return []
+    results = []
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.get(
-                "https://api.themoviedb.org/3/movie/top_rated",
-                params={"api_key": TMDB_API_KEY, "page": 1},
-            )
-            resp.raise_for_status()
-            return resp.json().get("results", [])
+            for page in range(1, 4):
+                resp = await client.get(
+                    "https://api.themoviedb.org/3/movie/top_rated",
+                    params={"api_key": TMDB_API_KEY, "page": page},
+                )
+                resp.raise_for_status()
+                results.extend(resp.json().get("results", []))
     except Exception:
         logger.exception("Failed to fetch TMDB top-rated movies")
-        return []
+    return results
 
 
 async def _fetch_tmdb_series() -> list[dict]:
-    """Fetch top-rated TV series from TMDB (page 1, 20 results)."""
+    """Fetch top-rated TV series from TMDB (pages 1-3, 60 results)."""
     if not TMDB_API_KEY:
         logger.warning("TMDB_API_KEY not set, skipping series")
         return []
+    results = []
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.get(
-                "https://api.themoviedb.org/3/tv/top_rated",
-                params={"api_key": TMDB_API_KEY, "page": 1},
-            )
-            resp.raise_for_status()
-            return resp.json().get("results", [])
+            for page in range(1, 4):
+                resp = await client.get(
+                    "https://api.themoviedb.org/3/tv/top_rated",
+                    params={"api_key": TMDB_API_KEY, "page": page},
+                )
+                resp.raise_for_status()
+                results.extend(resp.json().get("results", []))
     except Exception:
         logger.exception("Failed to fetch TMDB top-rated series")
-        return []
+    return results
 
 
 async def _fetch_open_library_books() -> list[dict]:
-    """Fetch popular fiction books from Open Library (20 results)."""
+    """Fetch popular books from Open Library (60 results across categories)."""
+    categories = ["subject:fiction", "subject:science fiction", "subject:fantasy"]
+    all_docs = []
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.get(
-                "https://openlibrary.org/search.json",
-                params={
-                    "q": "subject:fiction",
-                    "limit": 20,
-                    "fields": "title,first_publish_year,author_name,cover_i",
-                },
-            )
-            resp.raise_for_status()
-            return resp.json().get("docs", [])
+            for cat in categories:
+                resp = await client.get(
+                    "https://openlibrary.org/search.json",
+                    params={
+                        "q": cat,
+                        "limit": 20,
+                        "fields": "title,first_publish_year,author_name,cover_i",
+                    },
+                )
+                resp.raise_for_status()
+                all_docs.extend(resp.json().get("docs", []))
     except Exception:
         logger.exception("Failed to fetch Open Library books")
-        return []
+    return all_docs
 
 
 async def _seed_tmdb_items(

@@ -447,6 +447,13 @@ function onLogout() {
   --color-type-bg: #ede8f5;
   --color-type-text: #5b3fb5;
 
+  --color-type-movie-bg: #edf2fb;
+  --color-type-movie-border: #c0d4f0;
+  --color-type-series-bg: #edf7f0;
+  --color-type-series-border: #b8dcc8;
+  --color-type-book-bg: #faf5eb;
+  --color-type-book-border: #e2d0a8;
+
   --color-error: #d93025;
   --color-error-bg: #fef0ef;
   --color-success: #1a7a3a;

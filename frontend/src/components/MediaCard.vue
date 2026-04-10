@@ -1,5 +1,5 @@
 <template>
-  <article class="media-card">
+  <article :class="['media-card', `type-${item.media_type}`]">
     <button
       type="button"
       class="card-recommend-btn"
@@ -120,7 +120,13 @@ const imageUrl = computed(() => {
   border: 1px solid var(--color-border-light);
   transition: transform var(--transition-base), box-shadow var(--transition-base);
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
+
+.media-card.type-movie { border-color: var(--color-type-movie-border); background: var(--color-type-movie-bg); }
+.media-card.type-series { border-color: var(--color-type-series-border); background: var(--color-type-series-bg); }
+.media-card.type-book { border-color: var(--color-type-book-border); background: var(--color-type-book-bg); }
 
 .media-card:hover {
   transform: translateY(-6px);
@@ -130,7 +136,9 @@ const imageUrl = computed(() => {
 .card-link {
   text-decoration: none;
   color: inherit;
-  display: block;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
 .card-image {
@@ -186,6 +194,7 @@ const imageUrl = computed(() => {
 
 .card-body {
   padding: 0.75rem 0.85rem 0.85rem;
+  flex: 1;
 }
 
 .card-type {
