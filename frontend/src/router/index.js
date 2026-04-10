@@ -10,6 +10,7 @@ const FeedView = () => import('../views/FeedView.vue')
 const FriendsView = () => import('../views/FriendsView.vue')
 const FriendCollectionView = () => import('../views/FriendCollectionView.vue')
 const RecommendationsView = () => import('../views/RecommendationsView.vue')
+const ExploreView = () => import('../views/ExploreView.vue')
 
 const routes = [
   // Auth routes (public)
@@ -23,6 +24,7 @@ const routes = [
   { path: '/stats', name: 'stats', component: StatsView },
   { path: '/import-export', name: 'import-export', component: ImportExportView },
   { path: '/feed', name: 'feed', component: FeedView },
+  { path: '/explore', name: 'explore', component: ExploreView },
   { path: '/friends', name: 'friends', component: FriendsView },
   { path: '/friends/:id/collection', name: 'friend-collection', component: FriendCollectionView },
   { path: '/recommendations', name: 'recommendations', component: RecommendationsView },

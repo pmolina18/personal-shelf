@@ -49,3 +49,54 @@ Cada idea sigue este formato:
 - Estado: Implementada el 2026-04-10. Botón de recomendar en detalle de media, vista de recomendaciones con badge de contador en el sidebar, aceptar/rechazar recomendaciones.
 
 ---
+
+
+## [IDEA-4] Ventana Explore — Catálogo global con filtros y recomendaciones ✅ COMPLETADA → `.kiro/specs/explore-catalog/`
+
+- Tipo: feature
+- Prioridad: alta
+- Descripción: Nueva vista "Explore" que muestre un catálogo global de items multimedia que existen en la plataforma (de cualquier usuario), agrupados por título+tipo para evitar duplicados. Permite descubrir contenido nuevo, filtrar por tipo de media, ordenar alfabéticamente (A→Z / Z→A) y ordenar por "recomendaciones de amigos" (cuántos amigos lo tienen o te lo han recomendado).
+- Contexto: Se apoya en la infraestructura existente de `MediaItem`, `recommendations`, `friendships`. El filtro por tipo ya existe en `MediaFilters`. La ordenación por recomendaciones requiere JOINs con `recommendations` + `friendships` y un COUNT como criterio de ordenación. Cada item del explore podría mostrar: "N amigos lo tienen", "N amigos te lo recomendaron", con usernames/avatares.
+- Notas: Dos opciones para poblar el catálogo: (1) agregar items de todos los usuarios (más orgánico, crece solo), (2) seed inicial con datos de TMDB/Open Library. La opción 1 es más sencilla y coherente con la arquitectura actual. Se puede complementar con un script de seed para contenido popular. No requiere modelo nuevo si se reutiliza `MediaItem` con una query global. Considerar también un endpoint nuevo tipo `GET /api/explore` con parámetros de filtro, orden y paginación.
+- Estado: Implementada el 2026-04-10. Vista Explore con deduplicación, señales sociales, filtros, ordenación, botón "Add to shelf", exclusión de items propios, y seed script con 60 items populares.
+
+---
+
+
+## [IDEA-5] Plataforma / formato de consumo por item
+
+- Tipo: feature
+- Prioridad: media
+- Descripción: Al crear o editar un item, poder indicar dónde o cómo lo has consumido. Para películas y series: Netflix, HBO, Disney+, Amazon Prime, cine, etc. Para libros: libro físico, Kindle, audiolibro. Esto añade contexto personal a cada item y permite filtrar/agrupar por plataforma en el futuro.
+- Contexto: Requiere un nuevo campo `platform` (string, nullable) en `MediaItem` + migración Alembic. En el frontend, un select/dropdown en `MediaForm.vue` cuyas opciones cambien dinámicamente según el `media_type` seleccionado. También actualizar `MediaCreate`, `MediaUpdate`, `MediaResponse` en schemas.
+- Notas: Las opciones de plataforma podrían ser un enum en backend o simplemente un campo de texto libre con sugerencias predefinidas en frontend (más flexible para añadir plataformas nuevas sin migración). Considerar también mostrar el icono/logo de la plataforma en `MediaCard` y `MediaDetailView`.
+
+---
+
+## [IDEA-6] Eliminar funcionalidad de Import/Export
+
+- Tipo: mejora
+- Prioridad: media
+- Descripción: Quitar completamente la funcionalidad de import/export del catálogo. No tiene sentido en el contexto actual de la app como red social. Incluye eliminar: backend (ExportService, endpoints en stats_export router), frontend (ImportExportView, ruta, enlace en sidebar), schemas (ExportData, ImportResult), y tests asociados.
+- Contexto: Archivos afectados: `backend/services/export_service.py`, `backend/routers/stats_export.py` (endpoints de export/import), `frontend/src/views/ImportExportView.vue`, `frontend/src/api/media.js` (funciones exportCatalog/importCatalog), router, App.vue (sidebar link). También tests en `tests/` y `frontend/src/__tests__/`.
+- Notas: Es una limpieza — eliminar código muerto simplifica el mantenimiento. Hacer una migración Alembic no es necesario ya que no hay cambios en el modelo de datos.
+
+---
+
+## [IDEA-7] Tooltips en iconos del sidebar colapsado
+
+- Tipo: mejora
+- Prioridad: media
+- Descripción: Cuando el sidebar está colapsado (solo iconos visibles), al pasar el ratón sobre cada icono debería aparecer un tooltip con el nombre de la sección (ej: "Catálogo", "Amigos", "Recomendaciones", etc.). Mejora la usabilidad cuando el sidebar está en modo compacto.
+- Contexto: Archivo principal: `frontend/src/App.vue` (sidebar). Se puede implementar con `title` attribute nativo (simple) o con un tooltip CSS custom (más bonito, consistente con el diseño). Solo aplica cuando `collapsed === true` — con el sidebar expandido el texto ya es visible.
+- Notas: La opción CSS custom (pseudo-elemento `::after` con `content: attr(data-tooltip)` + `position: absolute`) da mejor control visual que el `title` nativo, que depende del navegador y tiene delay.
+
+---
+
+## [IDEA-8] Fechas de cambio de estado por item (status timestamps)
+
+- Tipo: feature
+- Prioridad: media
+- Descripción: Registrar automáticamente la fecha en la que un item cambia a cada estado: cuándo se puso en "pending", cuándo pasó a "in_progress" y cuándo se marcó como "completed". Así queda reflejado el historial temporal de consumo de cada item.
+- Contexto: Requiere tres nuevos campos nullable en `MediaItem`: `pending_at`, `in_progress_at`, `completed_at` (DateTime, nullable) + migración Alembic. Cada vez que se actualice el `status` de un item (vía `MediaService.update_media` o el endpoint PATCH de status), se rellena el campo correspondiente con `datetime.utcnow()`. También actualizar `MediaResponse` en schemas para exponer las fechas, y mostrarlas en `MediaDetailView.vue` (ej: "En pending desde 12 mar 2026", "Completado el 5 abr 2026").
+- Notas: Los items existentes tendrán los tres campos a `null` — solo se rellenan a partir de ahora. Si un item vuelve a un estado anterior (ej: de completed a in_progress), se sobreescribe la fecha de ese estado con la nueva. Considerar mostrar una mini-timeline visual en el detalle del item con los tres hitos.

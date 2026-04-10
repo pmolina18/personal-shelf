@@ -12,6 +12,7 @@ from backend.config import ALLOWED_ORIGINS, IMAGE_STORAGE_PATH, TMDB_API_KEY
 from backend.db import get_session
 from backend.models.media import MediaItem
 from backend.routers.auth import router as auth_router
+from backend.routers.explore import router as explore_router
 from backend.routers.export_import import router as export_import_router
 from backend.routers.feed import router as feed_router
 from backend.routers.recommendations import router as recommendations_router
@@ -40,6 +41,7 @@ app.include_router(export_import_router)
 app.include_router(friends_router)
 app.include_router(feed_router)
 app.include_router(recommendations_router)
+app.include_router(explore_router)
 
 
 @app.get("/api/health")

@@ -135,6 +135,31 @@ export function getMediaImage(id) {
   return request(`/media/${id}/image`)
 }
 
+// ── Explore ─────────────────────────────────────────────
+
+/**
+ * List the global explore catalog with optional filters and pagination.
+ * @param {Object} params - { media_type, search, sort, page, size }
+ */
+/** Add an explore item to the user's shelf as pending. */
+export function addToShelf(body) {
+  return request('/explore/add', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function listExplore(params = {}) {
+  const query = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== '') {
+      query.append(key, value)
+    }
+  }
+  const qs = query.toString()
+  return request(`/explore${qs ? `?${qs}` : ''}`)
+}
+
 // ── Statistics ──────────────────────────────────────────────
 
 /** Get catalog statistics. */

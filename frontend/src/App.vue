@@ -166,6 +166,35 @@
         </router-link>
         <router-link
           v-if="isAuthenticated"
+          to="/explore"
+          class="nav-item"
+          :title="collapsed ? 'Explore' : undefined"
+          @click="mobileOpen = false"
+        >
+          <svg
+            class="nav-icon"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          ><circle
+            cx="12"
+            cy="12"
+            r="10"
+          /><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" /></svg>
+          <Transition name="fade-text">
+            <span
+              v-if="!collapsed"
+              class="nav-label"
+            >Explore</span>
+          </Transition>
+        </router-link>
+        <router-link
+          v-if="isAuthenticated"
           to="/friends"
           class="nav-item"
           :title="collapsed ? 'Friends' : undefined"
