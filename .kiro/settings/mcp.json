@@ -8,7 +8,9 @@
         "postgresql://user:password@localhost:5432/media_tracker"
       ],
       "disabled": false,
-      "autoApprove": []
+      "autoApprove": [
+        "query"
+      ]
     },
     "filesystem": {
       "command": "npx",
