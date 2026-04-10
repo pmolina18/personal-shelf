@@ -168,6 +168,50 @@
           ><path d="m6 9 6 6 6-6" /></svg>
         </div>
       </div>
+
+      <div class="control-field">
+        <label
+          for="explore-tag"
+          class="visually-hidden"
+        >Filter by tag</label>
+        <div class="field-inner">
+          <svg
+            class="field-icon"
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          ><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z" /><path d="M7 7h.01" /></svg>
+          <input
+            id="explore-tag"
+            v-model="tagInput"
+            type="text"
+            placeholder="Filter by tag…"
+            @input="onTagInput"
+          >
+          <button
+            v-if="tagInput"
+            type="button"
+            class="field-clear"
+            aria-label="Clear tag filter"
+            @click="clearTag"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+            ><path d="M18 6 6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+      </div>
     </form>
 
     <div
@@ -237,18 +281,28 @@ const {
 const searchInput = ref('')
 const typeInput = ref('')
 const sortInput = ref('title_asc')
+const tagInput = ref('')
 
 function onSearchInput() {
-  setFilters({ search: searchInput.value || null, media_type: typeInput.value || null })
+  setFilters({ search: searchInput.value || null, media_type: typeInput.value || null, tag: tagInput.value || null })
 }
 
 function clearSearch() {
   searchInput.value = ''
-  setFilters({ search: null, media_type: typeInput.value || null })
+  setFilters({ search: null, media_type: typeInput.value || null, tag: tagInput.value || null })
 }
 
 function onTypeChange() {
-  setFilters({ media_type: typeInput.value || null, search: searchInput.value || null })
+  setFilters({ media_type: typeInput.value || null, search: searchInput.value || null, tag: tagInput.value || null })
+}
+
+function onTagInput() {
+  setFilters({ tag: tagInput.value || null, media_type: typeInput.value || null, search: searchInput.value || null })
+}
+
+function clearTag() {
+  tagInput.value = ''
+  setFilters({ tag: null, media_type: typeInput.value || null, search: searchInput.value || null })
 }
 
 function onSortChange() {

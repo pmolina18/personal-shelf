@@ -15,7 +15,8 @@ from backend.schemas.explore import ExploreAddRequest, ExploreResult
 from backend.schemas.media import MediaResponse, MediaType
 from backend.services.explore_service import ExploreService
 from backend.services.image_service import ImageService
-from backend.services.media_service import _to_response
+from backend.services.media_service import MediaService, _to_response
+from backend.services.metadata_service import MetadataService
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,8 @@ router = APIRouter(prefix="/api/explore", tags=["explore"])
 
 _explore_service = ExploreService()
 _image_service = ImageService()
+_media_service = MediaService()
+_metadata_service = MetadataService()
 
 _VALID_SORTS = {"title_asc", "title_desc", "friends"}
 
@@ -31,6 +34,7 @@ _VALID_SORTS = {"title_asc", "title_desc", "friends"}
 async def list_explore(
     media_type: MediaType | None = Query(None),
     search: str | None = Query(None),
+    tag: str | None = Query(None),
     sort: str = Query("title_asc"),
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
@@ -67,6 +71,7 @@ async def list_explore(
         user_id=user.id,
         media_type=mt_value,
         search=search,
+        tag=tag,
         sort=sort,
         page=page,
         size=size,
@@ -96,7 +101,35 @@ async def add_from_explore(
     """
     result = await _explore_service.add_to_shelf(session, user.id, data)
 
-    # Attempt to fetch an image (best-effort, same pattern as media router)
+    # Autofill metadata + genres + image (same pattern as create_media)
+    try:
+        candidates = await _metadata_service.search(data.title, data.media_type.value)
+        if candidates:
+            best = candidates[0]
+            item = await session.get(MediaItem, result.id)
+            if item is not None:
+                changed = False
+                if not item.year and best.year is not None:
+                    item.year = best.year
+                    changed = True
+                if not item.creator and best.creator is not None:
+                    item.creator = best.creator
+                    changed = True
+                if not item.notes and best.description is not None:
+                    item.notes = best.description
+                    changed = True
+                # Auto-assign genre tags
+                if best.genres and not item.tags:
+                    tags = await _media_service._get_or_create_tags(session, best.genres)
+                    item.tags = tags
+                    changed = True
+                if changed:
+                    await session.commit()
+                    await session.refresh(item)
+    except Exception:
+        logger.exception("Metadata autofill failed for explore add '%s'", data.title)
+
+    # Fetch image (best-effort)
     try:
         image_filename = await _image_service.fetch_image(
             data.title, data.media_type.value,
@@ -110,4 +143,8 @@ async def add_from_explore(
     except Exception:
         logger.exception("Image fetch failed for explore add '%s'", data.title)
 
+    # Re-read to return latest state
+    item = await session.get(MediaItem, result.id)
+    if item is not None:
+        return _to_response(item)
     return result

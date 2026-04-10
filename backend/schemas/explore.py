@@ -28,6 +28,7 @@ class ExploreItem(BaseModel):
     year: int | None = None
     creator: str | None = None
     image_url: str | None = None
+    tags: list[str] = Field(default_factory=list)
     friends_have: int = 0
     friends_recommended: int = 0
 

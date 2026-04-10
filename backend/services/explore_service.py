@@ -29,6 +29,7 @@ class ExploreService:
         user_id: int,
         media_type: str | None = None,
         search: str | None = None,
+        tag: str | None = None,
         sort: str = "title_asc",
         page: int = 1,
         size: int = 20,
@@ -108,6 +109,9 @@ class ExploreService:
         if search:
             items_q = items_q.where(MediaItem.title.ilike(f"%{search}%"))
 
+        # Note: tag filter is applied AFTER deduplication (in Python) to ensure
+        # the representative item's tags are checked, not just any duplicate's tags.
+
         # Order so that items with images come first (for dedup representative)
         items_q = items_q.order_by(
             MediaItem.image_path.is_(None).asc(),
@@ -144,12 +148,21 @@ class ExploreService:
                     year=item.year,
                     creator=item.creator,
                     image_url=f"/images/{item.image_path}" if item.image_path else None,
+                    tags=[t.name for t in item.tags] if item.tags else [],
                     friends_have=fh,
                     friends_recommended=fr,
                 )
             )
 
-        # --- 5. Sort ---
+        # --- 5. Filter by tag (post-dedup) ---
+        if tag:
+            tag_lower = tag.lower()
+            deduped = [
+                item for item in deduped
+                if any(tag_lower in t.lower() for t in item.tags)
+            ]
+
+        # --- 6. Sort ---
         if sort == "title_desc":
             deduped.sort(key=lambda x: x.title.lower(), reverse=True)
         elif sort == "friends":
@@ -160,7 +173,7 @@ class ExploreService:
             # title_asc (default)
             deduped.sort(key=lambda x: x.title.lower())
 
-        # --- 6. Paginate ---
+        # --- 7. Paginate ---
         total = len(deduped)
         pages = math.ceil(total / size) if size > 0 else 0
         start = (page - 1) * size

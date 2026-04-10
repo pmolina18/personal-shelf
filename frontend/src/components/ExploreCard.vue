@@ -65,6 +65,20 @@
         >{{ item.creator }}</span>
       </div>
       <div
+        v-if="item.tags && item.tags.length"
+        class="explore-card__tags"
+      >
+        <span
+          v-for="t in item.tags.slice(0, 3)"
+          :key="t"
+          class="explore-card__tag"
+        >{{ t }}</span>
+        <span
+          v-if="item.tags.length > 3"
+          class="explore-card__tag explore-card__tag--more"
+        >+{{ item.tags.length - 3 }}</span>
+      </div>
+      <div
         v-if="item.friends_have > 0 || item.friends_recommended > 0"
         class="explore-card__social"
       >
@@ -226,6 +240,27 @@ const imageUrl = computed(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.explore-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 0.35rem;
+}
+
+.explore-card__tag {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.4rem;
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
+  border-radius: var(--radius-full);
+  font-weight: 500;
+}
+
+.explore-card__tag--more {
+  background: var(--color-border-light);
+  color: var(--color-text-muted);
 }
 
 .explore-card__social {

@@ -16,6 +16,7 @@ export function useExplore() {
 
   const mediaType = ref(null)
   const search = ref(null)
+  const tag = ref(null)
   const sort = ref('title_asc')
 
   async function fetchExplore() {
@@ -27,6 +28,7 @@ export function useExplore() {
         size: size.value,
         media_type: mediaType.value,
         search: search.value,
+        tag: tag.value,
         sort: sort.value,
       }
       const result = await listExplore(params)
@@ -43,6 +45,7 @@ export function useExplore() {
   function setFilters(newFilters) {
     if (newFilters.media_type !== undefined) mediaType.value = newFilters.media_type
     if (newFilters.search !== undefined) search.value = newFilters.search
+    if (newFilters.tag !== undefined) tag.value = newFilters.tag
     page.value = 1
     return fetchExplore()
   }
@@ -83,6 +86,7 @@ export function useExplore() {
     error,
     mediaType,
     search,
+    tag,
     sort,
     fetchExplore,
     setFilters,
