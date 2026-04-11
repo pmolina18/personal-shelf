@@ -863,3 +863,74 @@
 - Observation: Existing patterns held. Removing a cross-cutting feature (import/export) required changes across 13 touchpoints: 4 deleted files (`export_service.py`, `export_import.py`, `ImportExportView.vue`, `test_export_service.py`), 9 edited files (`main.py`, `schemas/media.py`, `mcp/server.py`, `conftest.py`, `router/index.js`, `api/media.js`, `App.vue`, `test_stats_export_routers.py`, `test_property_stats_export.py`, `test_property_multitenancy.py`, `test_property_mcp.py`). The `context-gatherer` subagent was useful for initial discovery but `grepSearch` with patterns like `ExportData|ImportResult` and `export_service|ExportService` was essential for finding all references — the subagent missed MCP server tools, property tests, and conftest fixtures. Two pre-existing broken test files (`test_property_recommendations.py`, `test_recommendation_router.py`) surfaced during validation — unrelated to this change. All 26 router tests passed; all 18 property tests collected cleanly.
 - Action: When removing a feature, always grep for service class names, schema names, and function names across the entire codebase — don't rely solely on the obvious file list. Check MCP server tools, property tests, conftest fixtures, and router imports as secondary touchpoints. Run `--collect-only` on modified property test files as a fast validation before full suite execution.
 - Confidence: high
+
+**[2026-04-10] — Session: git push IDEA-6 cleanup**
+- Observation: Existing patterns held. Selective `git add` with explicit file paths → `git commit` → `git push` worked without issues. The commit covered 17 files (+23/-981 lines). The unrelated modified image file (`backend/images/movie_5ded05507e2d.jpg`) was intentionally excluded by not adding it. No new technical issues discovered.
+- Action: No changes needed. Existing patterns confirmed.
+- Confidence: high
+
+
+**[2026-04-10] — Session: Google SSO feasibility advisory**
+- Observation: No new patterns. User asked about adding Google SSO to the existing JWT auth system. The current architecture (AllowedUsersService email validation, JWT token generation, User model with password_hash) supports Google SSO cleanly — the main changes would be: nullable password_hash on User, a new `POST /api/auth/google` endpoint, `google-auth` library for ID token verification, and Google Identity Services script on the frontend. No code changes were made — purely advisory session. Existing patterns held.
+- Action: No changes needed. When the user is ready to implement, this could be a spec (similar to social-login) or direct implementation depending on scope preference. Key dependency: Google Cloud Console project with OAuth client ID.
+- Confidence: high
+
+
+**[2026-04-10] — Session: IDEAS.md update (Google SSO idea)**
+- Observation: No new patterns. Appended IDEA-10 (Google SSO) to IDEAS.md following the established format. Used `grepSearch` to find the last IDEA number instead of reading the full file — faster for large markdown files. Existing patterns held.
+- Action: No changes needed.
+- Confidence: high
+
+
+**[2026-04-10] — Session: mobile app strategy advisory (PWA vs Capacitor vs native)**
+- Observation: No new technical patterns. User asked about publishing Personal Shelf to App Store and Google Play. The session was purely advisory — no code changes, no tool failures. Recommended a two-phase approach: (1) PWA first (vite-plugin-pwa, manifest.json, service worker) for quick validation, (2) Capacitor wrapper for actual store presence, reusing 95%+ of existing Vue code. Dismissed native rewrite (React Native/Flutter) as unnecessary for a content-focused app (lists, cards, forms, social feed) with no hardware-intensive needs. The existing Vue 3 + Vite stack is well-suited for both PWA and Capacitor paths. Existing patterns held — responded in Spanish following the spec-language steering.
+- Action: No changes needed. When the user decides to proceed, PWA implementation requires `vite-plugin-pwa` + `manifest.json` + meta tags in `index.html` (~1-2 hours). Capacitor requires `@capacitor/core` + `@capacitor/cli` + Xcode/Android Studio + developer accounts (Apple $99/year, Google $25 one-time). Both paths preserve the existing Vue codebase.
+- Confidence: high
+
+
+**[2026-04-10] — Session: IDEAS.md update (PWA + Capacitor ideas)**
+- Observation: No new patterns. Appended IDEA-11 (PWA, alta) and IDEA-12 (Capacitor, baja) to IDEAS.md following the established format. Used `grepSearch` to find the last IDEA number instead of reading the full file — consistent with the pattern documented on 2026-04-10 for IDEA-10. `fsAppend` worked correctly for adding two new sections. Existing patterns held.
+- Action: No changes needed.
+- Confidence: high
+
+
+**[2026-04-10] — Session: IDEAS.md minor edit (IDEA-11 install doc note)**
+- Observation: No new patterns. Single `strReplace` call updated IDEA-11's Notas field to include a `PWA_INSTALL.md` deliverable with user-facing installation instructions. Existing patterns held.
+- Action: No changes needed.
+- Confidence: high
+
+
+**[2026-04-10] — User preference: IDEAS always go through spec workflow**
+- Observation: User explicitly requested that all IDEAS.md entries must be implemented through the spec workflow (requirements → design → tasks), never as direct implementation without a spec. This applies regardless of the idea's size or complexity.
+- Action: When the user asks to implement any IDEA-XX, ALWAYS create a spec first (`.kiro/specs/<idea-name>/`) using the spec orchestrator workflow. Never skip straight to coding. The spec type maps from the IDEA's `Tipo` field: `feature` → requirements-first, `bugfix` → bugfix-workflow, `mejora` → requirements-first. Small CSS-only changes or config tweaks that were previously done directly (e.g., IDEA-9 card borders) should also go through a lightweight spec.
+- Confidence: high
+
+
+**[2026-04-10] — Session: subagent recommendations advisory**
+- Observation: User asked what additional custom subagents would make sense for the project beyond the existing `fastapi-backend-expert` and `vue-frontend-expert`. Reading `learnings.md` in full required four `readFile` calls with `start_line` offsets (1→212, 213→362, 363→552, 553→697, 698→907) due to the file now exceeding 900 lines — the truncation threshold continues to worsen. The advisory session involved reading both existing agent definitions, all IDEAS.md entries, and the full learnings history to identify recurring pain points. Three agents were recommended based on patterns in the learnings: (1) `devops-deploy-expert` for Render/Vercel/Neon/GitHub Actions/PWA/Capacitor config, (2) `alembic-migration-expert` for the recurring "migration created but not applied" bug pattern, (3) `test-fixer-expert` for the 44 broken frontend tests and future cross-cutting breakage from new features. No code changes were made — purely advisory.
+- Action: No changes needed. The learnings file archival is increasingly urgent — it now requires 5 reads to cover fully and exceeds 900 lines. When the user decides to create any of the recommended agents, extract conventions from the learnings entries (not generic best practices) to populate the agent's system prompt, following the same approach used for the existing two agents.
+- Confidence: high
+
+
+**[2026-04-10] — Custom subagent creation: devops-deploy-expert + test-fixer-expert**
+- Observation: Created two new custom subagents following the established pattern (extract conventions from actual code and learnings, not generic best practices). The `devops-deploy-expert` covers Render/Vercel/Neon.dev/Cloudflare/GitHub Actions/PWA/Capacitor with all project-specific details (SSL parameter naming, Cloudflare proxy caveat, ephemeral images, CORS config pattern). The `test-fixer-expert` covers the 6 common breakage patterns identified from learnings (auth headers, user_id FK, AllowedUsersService gate, schema changes, import errors, model registration) with concrete fix patterns extracted from actual fixes applied in previous sessions. Both agents use `tools: ["read", "write", "shell"]` matching the existing agents. Reading 8 source files (render.yaml, DEPLOY.md, config.py, db.py, env.py, alembic.ini, main.py, migration examples) provided sufficient context for the devops agent. The test-fixer agent drew primarily from learnings entries rather than source files since the patterns are about test infrastructure, not application code.
+- Action: When creating custom subagents, the learnings file is the richest source for test-related and infrastructure-related agents — it captures pain points and solutions that aren't visible in the current codebase. For domain-specific agents (backend, frontend), source files are the primary input. The project now has 4 agents covering all major development areas: backend, frontend, devops, and test repair.
+- Confidence: high
+
+
+**[2026-04-10] — Session: subagent visibility question (advisory)**
+- Observation: User asked if there's a way to monitor subagent activity in real time. There is no "subagent activity monitor" or live log panel in Kiro — subagents execute autonomously and return results to the main agent. The user can only observe file changes appearing in the explorer (Autopilot) or approve actions one by one (Supervised mode). This is a platform limitation, not a configuration issue.
+- Action: No changes needed. When delegating to subagents, proactively report what each subagent did in the chat response so the user has visibility. Suggest Supervised mode if the user wants more control over subagent actions.
+- Confidence: high
+
+
+**[2026-04-10] — Spec creation: suggestion-box (IDEA-2) requirements + design + tasks (direct, no subagent)**
+- Observation: Existing patterns held. Writing all three spec documents (requirements.md, design.md, tasks.md) directly without subagent delegation was fast when all context files were already loaded in the conversation from the initial parallel reads (github_service.py, main.py, config.py, schemas, dependencies, router, App.vue, api clients, composables). The context-gatherer subagent was invoked in parallel with direct file reads — both completed without conflicts. The `learnings.md` file now exceeds 900 lines and required 5 sequential `readFile` calls with `start_line` offsets to read in full (1→212, 212→362, 362→546, 546→695, 695→907). The IDEA-2 feature reuses the existing `GitHubService` pattern (already creates PRs for access requests) — extending it with a `create_issue()` method is straightforward since the GitHub Issues API is simpler than the PR creation flow. The spec correctly identified that the migration number should be `004` (after `001_initial`, `002_social_login`, `003_add_recommendations_table`). No new technical issues discovered — the session was purely spec creation with no code implementation.
+- Action: When creating specs for features that extend existing services (like adding `create_issue` to `GitHubService`), read the full existing service file to understand the pattern (headers, error handling, httpx usage) and reference it in the design doc. For the tasks.md "stand by" pattern, add a status block at the top with: current state, context loaded, and next steps — this makes resumption in a future session much faster. The learnings file archival is now critical — 5 reads per session start is excessive.
+- Confidence: high
+
+
+**[2026-04-11] — Task execution: suggestion-box (IDEA-2) tasks 1-5, 8-10 (parallel subagents)**
+- Observation: Existing patterns held. Parallel subagent delegation (fastapi-backend-expert for tasks 1-5, vue-frontend-expert for tasks 8-9) completed all files without conflicts. Both subagents created correct implementations on the first attempt — no import pruning issues, no diagnostic errors across all 12 files (6 backend, 4 frontend, 2 modified). The `alembic upgrade head` from `backend/` applied cleanly (migration 004). The Alembic migration was already at head, confirming the migration file was correctly numbered after `003_add_recommendations_table`. The `GITHUB_REPO no está configurado` warning in uvicorn logs is expected (env var not set locally) and confirms the graceful degradation path works — suggestions create without GitHub issues when not configured. The OpenAPI spec confirmed all 3 endpoints registered (`POST /api/suggestions`, `GET /api/suggestions`, `GET /api/suggestions/mine`). The `/mine` route is declared before the catch-all `GET ""` in the router to avoid path conflicts — this is the correct FastAPI pattern for sub-paths. Reading `learnings.md` in full now requires 5 `readFile` calls with `start_line` offsets due to the file exceeding 900 lines.
+- Action: No changes needed. The parallel subagent pattern continues to work well for features with clear backend/frontend separation. For routers with sub-paths like `/mine`, always declare specific paths before catch-all paths in FastAPI to avoid routing conflicts. The learnings file archival is overdue — it now requires 5 reads per session.
+- Confidence: high

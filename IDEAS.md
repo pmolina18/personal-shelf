@@ -29,10 +29,11 @@ Cada idea sigue este formato:
 
 ---
 
-## [IDEA-2] Buzón de sugerencias
+## [IDEA-2] Buzón de sugerencias ✅ COMPLETADA → `.kiro/specs/suggestion-box/`
 
 - Tipo: feature
 - Prioridad: media
+- Estado: Implementada el 2026-04-11. Modelo Suggestion, servicio con integración GitHub Issues, 3 endpoints REST, vista con pestañas (todas/mías), formulario inline, badges de tipo, enlace a GitHub issue, paginación, sidebar con icono lightbulb.
 - Descripción: me gustaría permitir que los primeros usuarios, pudiesen tener un sitio donde añadir sugerencias o peticiones de features nuevas
 - Contexto: esto serían nuevos endpoints y nuevas vistas
 - Notas: (opcional) Esas peticiones nuevas que escribiesen los usuarios de nuevas features o bugs que reporten, automáticamente tendrían que crear issues en Github para que de nuevo, yo pudiese priorizartelos y los fueses resolviendo uno a uno
@@ -110,3 +111,33 @@ Cada idea sigue este formato:
 - Descripción: Que las tarjetas (MediaCard) tengan un borde de color distinto según el tipo de item (película, serie, libro, etc.). Colores pastel y poco llamativos para que no canten demasiado pero se distinga de un vistazo qué tipo de contenido es cada tarjeta.
 - Contexto: Archivo principal: `frontend/src/components/MediaCard.vue`. Los tipos de media están definidos en `backend/schemas/media.py` (MediaType enum). Ya existen CSS custom properties en `App.vue` para el sistema de diseño. Se puede resolver solo con CSS (borde izquierdo o borde completo con color pastel según `media_type`).
 - Notas: Con que el borde sea distinto probablemente sea suficiente — no hace falta cambiar el fondo entero de la tarjeta. Colores sugeridos: tonos pastel suaves (azul para películas, verde para series, ámbar para libros, etc.). Definir las variables de color en App.vue y aplicarlas condicionalmente en MediaCard con una clase dinámica tipo `:class="'type-' + item.media_type"`.
+
+---
+
+## [IDEA-10] Login con Google (SSO)
+
+- Tipo: feature
+- Prioridad: media
+- Descripción: Añadir "Sign in with Google" como método alternativo de autenticación, manteniendo el login con email/password actual. El usuario elige cómo entrar; ambos métodos generan el mismo JWT.
+- Contexto: El sistema actual usa JWT con bcrypt (auth_service.py). El flujo sería: frontend obtiene ID token de Google → backend lo verifica con `google-auth` → find-or-create usuario → genera JWT. Requiere `GOOGLE_CLIENT_ID` de Google Cloud Console (gratis). El `password_hash` del modelo User pasaría a ser nullable para usuarios que solo usen Google. La validación de `AllowedUsersService` se aplica igual (el email de Google debe estar en `allowed_users`).
+- Notas: Dependencia externa: cuenta en Google Cloud Console con OAuth consent screen configurado. La librería `google-auth` (PyPI) verifica ID tokens sin necesidad de flujo OAuth completo del lado del servidor. En frontend, Google Identity Services se carga con un `<script>` tag y devuelve el credential via callback. Considerar si en el futuro se quieren más proveedores (GitHub, Apple) — si sí, diseñar el modelo con una tabla `oauth_accounts` desde el inicio en vez de meter `google_id` directo en `users`.
+
+---
+
+## [IDEA-11] Progressive Web App (PWA)
+
+- Tipo: feature
+- Prioridad: alta
+- Descripción: Convertir la SPA Vue actual en una PWA para que los usuarios puedan "instalar" la app desde el navegador en iOS y Android, con icono en el home screen y sin barra del navegador. Es el paso más rápido para ofrecer experiencia móvil sin necesidad de publicar en stores.
+- Contexto: Requiere `vite-plugin-pwa` (plugin de Vite), un `manifest.json` (nombre, iconos, colores, start_url), un Service Worker para cache/offline básico, y meta tags en `index.html` (`<meta name="theme-color">`, `<link rel="manifest">`, `<meta name="apple-mobile-web-app-capable">`). El plugin genera el SW automáticamente. Los iconos se necesitan en varios tamaños (192x192, 512x512 mínimo).
+- Notas: No requiere cuenta de desarrollador de Apple ni Google. Funciona en iOS 16.4+ con push notifications. Limitación: no aparece en App Store ni Google Play (aunque PWABuilder puede generar paquetes para stores). Es el paso previo natural antes de Capacitor. Incluir un documento tipo `PWA_INSTALL.md` con instrucciones paso a paso para que los usuarios sepan cómo instalar la app en su móvil (iOS: Safari → Compartir → Añadir a pantalla de inicio; Android: Chrome → menú → Instalar app), con capturas o descripciones claras del proceso.
+
+---
+
+## [IDEA-12] Publicar en App Store y Google Play con Capacitor
+
+- Tipo: feature
+- Prioridad: baja
+- Descripción: Envolver la app Vue en un WebView nativo usando Capacitor (del equipo de Ionic) para publicarla en App Store y Google Play. Reutiliza el 95%+ del código frontend actual sin reescritura.
+- Contexto: Requiere `@capacitor/core` + `@capacitor/cli`, luego `npx cap add ios` + `npx cap add android`. El flujo es: `vite build` → `npx cap sync` → abrir Xcode (iOS) / Android Studio (Android) → compilar y publicar. Necesita cuenta de Apple Developer ($99/año) y Google Play Console ($25 una vez). Xcode ya disponible en el Mac actual.
+- Notas: El rendimiento es web-en-WebView, más que suficiente para una app de contenido (listas, cards, formularios). Da acceso a APIs nativas (push notifications, haptics, cámara) si se necesitan en el futuro. Tiene sentido hacerlo después de validar la experiencia móvil con la PWA (IDEA-11). Considerar si merece la pena el coste de las cuentas de desarrollador según el número de usuarios.
