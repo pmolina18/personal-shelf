@@ -18,6 +18,7 @@ from backend.routers.recommendations import router as recommendations_router
 from backend.routers.friends import router as friends_router
 from backend.routers.media import router as media_router
 from backend.routers.stats import router as stats_router
+from backend.routers.suggestions import router as suggestions_router
 from backend.services.image_service import ImageService
 
 app = FastAPI(title="Media Tracker", version="1.0.0")
@@ -40,6 +41,7 @@ app.include_router(friends_router)
 app.include_router(feed_router)
 app.include_router(recommendations_router)
 app.include_router(explore_router)
+app.include_router(suggestions_router)
 
 
 @app.get("/api/health")

@@ -166,6 +166,35 @@
         </router-link>
         <router-link
           v-if="isAuthenticated"
+          to="/suggestions"
+          class="nav-item"
+          :title="collapsed ? 'Suggestions' : undefined"
+          @click="mobileOpen = false"
+        >
+          <svg
+            class="nav-icon"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M9 18h6" />
+            <path d="M10 22h4" />
+            <path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z" />
+          </svg>
+          <Transition name="fade-text">
+            <span
+              v-if="!collapsed"
+              class="nav-label"
+            >Suggestions</span>
+          </Transition>
+        </router-link>
+        <router-link
+          v-if="isAuthenticated"
           to="/friends"
           class="nav-item"
           :title="collapsed ? 'Friends' : undefined"

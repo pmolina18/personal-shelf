@@ -76,6 +76,32 @@ class GitHubService:
         sanitized = re.sub(r"[^a-z0-9\-]", "", sanitized)
         return sanitized
 
+    async def create_issue(self, title: str, body: str, labels: list[str]) -> dict | None:
+        """Crea una issue en el repositorio de GitHub.
+
+        Args:
+            title: Título de la issue.
+            body: Cuerpo/descripción de la issue.
+            labels: Lista de etiquetas para la issue.
+
+        Returns:
+            Dict con 'number' y 'html_url' de la issue creada, o None si no configurado o falla.
+        """
+        if not self.is_configured:
+            logger.warning("GitHub no configurado — issue no creada")
+            return None
+        try:
+            url = f"{GITHUB_API_BASE}/repos/{self.repo}/issues"
+            payload = {"title": title, "body": body, "labels": labels}
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(url, headers=self._headers(), json=payload)
+                resp.raise_for_status()
+            data = resp.json()
+            return {"number": data["number"], "html_url": data["html_url"]}
+        except Exception as exc:
+            logger.error("Error al crear issue en GitHub: %s", exc)
+            return None
+
     async def create_access_request_pr(self, email: str) -> dict:
         """Crea un PR que añade el email al fichero allowed_users.
 

@@ -10,6 +10,7 @@ const FriendsView = () => import('../views/FriendsView.vue')
 const FriendCollectionView = () => import('../views/FriendCollectionView.vue')
 const RecommendationsView = () => import('../views/RecommendationsView.vue')
 const ExploreView = () => import('../views/ExploreView.vue')
+const SuggestionsView = () => import('../views/SuggestionsView.vue')
 
 const routes = [
   // Auth routes (public)
@@ -26,6 +27,7 @@ const routes = [
   { path: '/friends', name: 'friends', component: FriendsView },
   { path: '/friends/:id/collection', name: 'friend-collection', component: FriendCollectionView },
   { path: '/recommendations', name: 'recommendations', component: RecommendationsView },
+  { path: '/suggestions', name: 'suggestions', component: SuggestionsView },
 ]
 
 const router = createRouter({
