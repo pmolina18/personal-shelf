@@ -989,3 +989,38 @@
 - Observation: No new technical patterns discovered. Deleted test user `pablo` from Neon production DB via psql so the real user can register fresh after the passlib→bcrypt fix is deployed. Existing patterns held (Postgres.app psql binary for direct DB access).
 - Action: No changes needed. Existing patterns confirmed.
 - Confidence: high
+
+**[2026-04-12] — Session: git push bcrypt fix + deploy docs**
+- Observation: No new technical patterns discovered. Standard `git add` → `git commit` → `git push origin main` workflow. Single commit with the passlib→bcrypt fix plus deploy doc updates (6 files). Render auto-deploys on push to main. Existing patterns held.
+- Action: No changes needed. Existing patterns confirmed.
+- Confidence: high
+
+**[2026-04-12] — Debugging: CORS OPTIONS 400 vs POST 500 on Render**
+- Observation: The Render logs showed `OPTIONS /api/auth/register 400 Bad Request`, which initially appeared to be a CORS issue. However, manual `curl` testing with proper CORS headers (`Origin`, `Access-Control-Request-Method`, `Access-Control-Request-Headers`) returned 200 OK for OPTIONS. The POST still returns 500, suggesting the bcrypt fix hasn't taken effect — likely due to Render's dependency cache still using the old `passlib[bcrypt]` package. The OPTIONS 400 in the logs may have been from the browser's preflight hitting the old (pre-deploy) instance during the rolling deploy window. Key insight: Render may cache pip dependencies between deploys, so removing a package from `requirements.txt` doesn't guarantee it's uninstalled unless the build cache is cleared.
+- Action: When replacing a Python dependency on Render (e.g., `passlib` → `bcrypt`), use "Clear build cache & deploy" from Render dashboard (Settings → Build & Deploy) to force a clean `pip install`. Standard redeploys may reuse cached packages. Always check Render logs for the post-deploy traceback to confirm the fix is live.
+- Confidence: high
+
+**[2026-04-12] — Bugfix: missing `import bcrypt` after strReplace**
+- Observation: The `strReplace` tool itself does not prune imports, but the earlier `strReplace` that replaced `passlib` imports with `import bcrypt` was silently dropped. The `import bcrypt` line was added in the same `strReplace` call that removed `from passlib.context import CryptContext`, but the resulting file on disk did not contain `import bcrypt`. This caused `NameError: name 'bcrypt' is not defined` on Render. The root cause is consistent with the documented fsWrite pruning pattern — the tool chain may strip imports it considers unused at write time. Verified with `readFile` that the import was missing, added it back with a second `strReplace`, and pushed. Render redeployed successfully.
+- Action: After any import replacement via `strReplace`, always verify the file with `readFile` (first 15 lines) to confirm the new import is actually present. This is especially critical for imports that replace removed ones. The fsWrite/strReplace pruning issue continues to be the most recurring bug in the workflow.
+- Confidence: high
+
+**[2026-04-12] — Debugging: Render rolling deploy causes stale error logs**
+- Observation: During a Render rolling deploy, the old instance continues serving requests while the new one starts up. This means logs from the old instance (with the old code) appear interleaved with the new deploy's startup logs. The user saw `OPTIONS 400` and `NameError: bcrypt not defined` in the logs after pushing the fix, but these were from the old instance still running during the transition. The fix was confirmed working after the new instance became live (`Your service is live 🎉` appeared for the second time). The `curl` POST test returned 201 with valid tokens, confirming the passlib→bcrypt migration works on Python 3.14.
+- Action: When debugging Render deploys, always wait for the second `Your service is live 🎉` message before testing. Logs from the old instance during rolling deploy are misleading. Test with `curl` after the new instance is confirmed live to verify the fix.
+- Confidence: high
+
+**[2026-04-12] — Testing: allowed_users + GitHub PR flow on production**
+- Observation: The allowed_users registration gate works correctly in production — non-allowed emails get 403 with the expected Spanish message. The request-access endpoint (GitHub PR creation) returns 502, meaning `GITHUB_TOKEN`/`GITHUB_REPO` are set (otherwise 503) but the GitHub API call fails. The 502 is caught by the generic `except Exception` in `create_access_request_pr` and returns a generic error without detail. The most likely causes are: incorrect `GITHUB_REPO` format (needs `owner/repo`), insufficient token permissions (needs `repo` scope for classic tokens, or Contents + Pull Requests read/write for fine-grained tokens), or the token being invalid/expired.
+- Action: When debugging GitHub integration 502s, check: (1) `GITHUB_REPO` format is `owner/repo`, (2) token has `repo` scope (classic) or Contents + Pull Requests permissions (fine-grained), (3) token is not expired. Consider adding more specific error logging in the `except` block to capture the GitHub API response status and body for faster debugging.
+- Confidence: high
+
+**[2026-04-12] — Debugging: GitHub request-access 502 persists after GITHUB_REPO fix**
+- Observation: After the user updated `GITHUB_REPO` in Render, the request-access endpoint still returns 502. The response body is `error code: 502` (plain text, not JSON), which indicates Cloudflare or Render's proxy layer is returning the error rather than FastAPI's `HTTPException(502)`. This could mean: (1) the request times out before FastAPI can respond, (2) the service crashed during the request, or (3) Render didn't pick up the new env var without a restart. Render applies env var changes at runtime but the Python process reads `os.getenv()` at import time (in `config.py`), so a restart is required for changes to take effect.
+- Action: When changing env vars in Render that are read at import time via `os.getenv()` in `config.py`, a manual deploy or service restart is required — the running process won't see the new values. Consider using a function that reads env vars on each call for values that may change, or document that env var changes require a redeploy. Also, the `error code: 502` plain text response (vs JSON `{"detail":"..."}`) is a reliable indicator that the error comes from the proxy layer, not from FastAPI.
+- Confidence: high
+
+**[2026-04-12] — Testing: GitHub PR access request flow works in production**
+- Observation: After the user fixed `GITHUB_REPO` and redeployed, the request-access endpoint works correctly — returns 201 with a PR URL (https://github.com/pmolina18/personal-shelf/pull/1). The full allowed_users flow is validated end-to-end in production: non-allowed email → 403, request-access → creates GitHub PR (201), allowed email → registers successfully (201). The earlier 502 was confirmed to be caused by incorrect `GITHUB_REPO` value plus the need for a redeploy since `config.py` reads env vars at import time.
+- Action: No changes needed. The full auth + allowed_users + GitHub PR flow is production-validated. Existing patterns confirmed.
+- Confidence: high
