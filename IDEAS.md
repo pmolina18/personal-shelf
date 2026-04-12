@@ -163,3 +163,14 @@ Cada idea sigue este formato:
 - Descripción: Añadir un campo `status` al modelo de sugerencias (pending → in_progress → implemented → dismissed) con un badge visual en cada tarjeta de sugerencia. Permite que los usuarios vean si su idea fue implementada, está en progreso o fue descartada. Un endpoint PATCH protegido (solo admin) permite cambiar el estado.
 - Contexto: Archivos afectados: `backend/models/suggestion.py` (nuevo campo status), `backend/schemas/suggestion.py` (nuevo campo en response + schema de update), `backend/routers/suggestions.py` (endpoint PATCH), `backend/services/suggestion_service.py` (método update_status), `frontend/src/views/SuggestionsView.vue` (badge de estado en la card), migración Alembic. El patrón de badges por estado ya existe en MediaCard (pending/in_progress/completed) y se puede reutilizar el mismo CSS.
 - Notas: Reutilizar el patrón de colores de status que ya existe en las CSS custom properties (--color-status-pending-bg, etc.). Considerar también ocultar el link a GitHub issue mientras el repo sea privado (ya hecho). En el futuro, cuando el repo sea público, se puede re-añadir el link condicionalmente.
+
+---
+
+## [IDEA-15] Página de perfil + cambio de usuario y contraseña
+
+- Tipo: feature
+- Prioridad: media
+- Origen: Sugerencia de usuario (GitHub Issue #3)
+- Descripción: Nueva página de perfil que se abra al hacer click en el nombre de usuario en la barra lateral. Muestra datos del usuario y posiblemente integra las estadísticas actuales. Además, permite cambiar el nombre de usuario y la contraseña.
+- Contexto: Archivos afectados: nuevo `ProfileView.vue`, `backend/routers/auth.py` (endpoints PATCH para username/password), `backend/services/auth_service.py` (métodos update_username, update_password), `backend/schemas/auth.py` (schemas de update), `frontend/src/router/index.js` (nueva ruta /profile), `App.vue` (link en sidebar al perfil). El modelo `User` ya tiene `username` y `email` con constraints UNIQUE. Las estadísticas actuales están en `StatsView.vue` y `StatsService` — se podrían reutilizar o mover al perfil.
+- Notas: Para el cambio de contraseña, pedir la contraseña actual como verificación antes de permitir el cambio. Para el cambio de username, validar unicidad antes de confirmar. Considerar si las estadísticas se mueven al perfil o se mantienen como vista separada con un link desde el perfil.
