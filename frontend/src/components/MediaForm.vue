@@ -3,6 +3,30 @@
     class="media-form"
     @submit.prevent="onSubmit"
   >
+    <!-- Type selector (chips) -->
+    <div class="field">
+      <span class="field-label">What are you adding? <span class="req">*</span></span>
+      <div
+        class="type-chips"
+        role="radiogroup"
+        aria-label="Media type"
+      >
+        <button
+          v-for="t in mediaTypes"
+          :key="t.value"
+          type="button"
+          class="type-chip"
+          :class="{ active: form.media_type === t.value }"
+          role="radio"
+          :aria-checked="form.media_type === t.value"
+          @click="form.media_type = t.value"
+        >
+          <span class="type-chip__icon">{{ t.icon }}</span>
+          <span class="type-chip__label">{{ t.label }}</span>
+        </button>
+      </div>
+    </div>
+
     <!-- Title -->
     <div
       ref="titleFieldRef"
@@ -31,13 +55,19 @@
           maxlength="255"
           required
           aria-required="true"
-          placeholder="e.g. The Shawshank Redemption"
+          :placeholder="titlePlaceholder"
           autocomplete="off"
           :aria-expanded="showSuggestions && suggestions.length > 0"
           aria-autocomplete="list"
           aria-controls="mf-suggestions"
         >
       </div>
+      <p
+        v-if="!form.media_type"
+        class="field-hint"
+      >
+        Pick a type first to enable search suggestions
+      </p>
       <ul
         v-if="showSuggestions && suggestions.length"
         id="mf-suggestions"
@@ -73,95 +103,36 @@
       </p>
     </div>
 
-    <!-- Type + Year row -->
-    <div class="field-row">
-      <div class="field">
-        <label
-          for="mf-type"
-          class="field-label"
-        >Type <span class="req">*</span></label>
-        <div class="field-input-wrap field-input-wrap--select">
-          <svg
-            class="field-icon"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          ><rect
-            x="2"
-            y="7"
-            width="20"
-            height="14"
-            rx="2"
-          /><path d="M16 7V5a4 4 0 0 0-8 0v2" /></svg>
-          <select
-            id="mf-type"
-            v-model="form.media_type"
-            required
-            aria-required="true"
-          >
-            <option
-              value=""
-              disabled
-            >
-              Select type
-            </option>
-            <option value="movie">
-              Movie
-            </option>
-            <option value="book">
-              Book
-            </option>
-            <option value="series">
-              Series
-            </option>
-          </select>
-          <svg
-            class="field-chevron"
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-            stroke-linecap="round"
-          ><path d="m6 9 6 6 6-6" /></svg>
-        </div>
-      </div>
-      <div class="field">
-        <label
-          for="mf-year"
-          class="field-label"
-        >Year</label>
-        <div class="field-input-wrap">
-          <svg
-            class="field-icon"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          ><rect
-            x="3"
-            y="4"
-            width="18"
-            height="18"
-            rx="2"
-          /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
-          <input
-            id="mf-year"
-            v-model="form.year"
-            type="number"
-            placeholder="2024"
-          >
-        </div>
+    <!-- Year -->
+    <div class="field">
+      <label
+        for="mf-year"
+        class="field-label"
+      >Year</label>
+      <div class="field-input-wrap">
+        <svg
+          class="field-icon"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        ><rect
+          x="3"
+          y="4"
+          width="18"
+          height="18"
+          rx="2"
+        /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+        <input
+          id="mf-year"
+          v-model="form.year"
+          type="number"
+          placeholder="2024"
+        >
       </div>
     </div>
 
@@ -242,7 +213,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, watch, onUnmounted } from 'vue'
+import { reactive, ref, computed, watch, onUnmounted } from 'vue'
 import { searchMetadata } from '../api/media.js'
 
 const props = defineProps({
@@ -261,6 +232,20 @@ const form = reactive({
 })
 
 const errors = reactive({ title: '' })
+
+const mediaTypes = [
+  { value: 'movie', label: 'Movie', icon: '🎬' },
+  { value: 'series', label: 'Series', icon: '📺' },
+  { value: 'book', label: 'Book', icon: '📖' },
+]
+
+const titlePlaceholders = {
+  movie: 'e.g. The Shawshank Redemption',
+  series: 'e.g. Breaking Bad',
+  book: 'e.g. 1984',
+}
+
+const titlePlaceholder = computed(() => titlePlaceholders[form.media_type] || 'Pick a type first…')
 
 const suggestions = ref([])
 const showSuggestions = ref(false)
@@ -371,6 +356,59 @@ function onSubmit() {
 </script>
 
 <style scoped>
+/* Type chips */
+.type-chips {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.type-chip {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.75rem 0.5rem;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.type-chip:hover:not(.active) {
+  border-color: var(--color-text-muted);
+  background: var(--color-bg-warm);
+}
+
+.type-chip.active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-subtle);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.type-chip__icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.type-chip__label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.type-chip.active .type-chip__label {
+  color: var(--color-primary);
+}
+
+.field-hint {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin: 0;
+  font-style: italic;
+}
+
 .media-form {
   display: flex;
   flex-direction: column;
