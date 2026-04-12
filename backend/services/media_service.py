@@ -44,6 +44,7 @@ def _to_response(item: MediaItem) -> MediaResponse:
         updated_at=item.updated_at,
         started_at=item.started_at,
         completed_at=item.completed_at,
+        pending_at=item.pending_at,
     )
 
 
@@ -74,6 +75,7 @@ class MediaService:
             year=data.year,
             creator=data.creator,
             notes=data.notes,
+            pending_at=datetime.utcnow(),
         )
 
         # Handle tags if provided
@@ -268,13 +270,18 @@ class MediaService:
         if item.user_id != user_id:
             raise HTTPException(status_code=403, detail="Access denied")
 
+        # No-op: si el estado no cambia, retornar sin modificar timestamps
+        if item.status == status:
+            return _to_response(item)
+
         item.status = status
         now = datetime.utcnow()
 
-        if status == MediaStatus.in_progress.value and item.started_at is None:
+        if status == MediaStatus.pending.value:
+            item.pending_at = now
+        elif status == MediaStatus.in_progress.value:
             item.started_at = now
-
-        if status == MediaStatus.completed.value:
+        elif status == MediaStatus.completed.value:
             item.completed_at = now
 
         item.updated_at = now

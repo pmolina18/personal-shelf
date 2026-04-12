@@ -195,6 +195,77 @@
             </div>
           </div>
 
+          <!-- Mini-Timeline -->
+          <div
+            v-if="hasTimeline"
+            class="card"
+          >
+            <span class="section-label">Timeline</span>
+            <div
+              class="mini-timeline"
+              role="list"
+              aria-label="Status timeline"
+            >
+              <div
+                class="timeline-step"
+                :class="{ 'timeline-step--active': currentItem.pending_at }"
+                role="listitem"
+                :aria-label="currentItem.pending_at
+                  ? `Pending since ${formatDate(currentItem.pending_at)}`
+                  : 'Pending — no date'"
+              >
+                <span class="timeline-dot timeline-dot--pending" />
+                <span class="timeline-label">Pending</span>
+                <span
+                  v-if="currentItem.pending_at"
+                  class="timeline-date"
+                >
+                  {{ formatDate(currentItem.pending_at) }}
+                </span>
+              </div>
+
+              <span class="timeline-line" />
+
+              <div
+                class="timeline-step"
+                :class="{ 'timeline-step--active': currentItem.started_at }"
+                role="listitem"
+                :aria-label="currentItem.started_at
+                  ? `In Progress since ${formatDate(currentItem.started_at)}`
+                  : 'In Progress — no date'"
+              >
+                <span class="timeline-dot timeline-dot--in-progress" />
+                <span class="timeline-label">In Progress</span>
+                <span
+                  v-if="currentItem.started_at"
+                  class="timeline-date"
+                >
+                  {{ formatDate(currentItem.started_at) }}
+                </span>
+              </div>
+
+              <span class="timeline-line" />
+
+              <div
+                class="timeline-step"
+                :class="{ 'timeline-step--active': currentItem.completed_at }"
+                role="listitem"
+                :aria-label="currentItem.completed_at
+                  ? `Completed since ${formatDate(currentItem.completed_at)}`
+                  : 'Completed — no date'"
+              >
+                <span class="timeline-dot timeline-dot--completed" />
+                <span class="timeline-label">Completed</span>
+                <span
+                  v-if="currentItem.completed_at"
+                  class="timeline-date"
+                >
+                  {{ formatDate(currentItem.completed_at) }}
+                </span>
+              </div>
+            </div>
+          </div>
+
           <RatingInput
             :model-value="currentItem.rating"
             :disabled="currentItem.status === 'pending'"
@@ -277,6 +348,18 @@ const statuses = [
   { value: 'in_progress', label: 'In Progress', icon: '▶️' },
   { value: 'completed', label: 'Completed', icon: '✅' },
 ]
+
+// Mini-timeline: visible si hay al menos un timestamp de estado
+const hasTimeline = computed(() =>
+  !!(currentItem.value?.pending_at || currentItem.value?.started_at || currentItem.value?.completed_at)
+)
+
+function formatDate(iso) {
+  if (!iso) return ''
+  return new Date(iso).toLocaleDateString(undefined, {
+    day: 'numeric', month: 'short', year: 'numeric',
+  })
+}
 
 async function onCreate(data) {
   try {
@@ -650,6 +733,102 @@ onMounted(() => {
 @media (max-width: 500px) {
   .detail-aside {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ── Mini-Timeline ─────────────────────────────────────── */
+.mini-timeline {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.timeline-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  flex: 1;
+  text-align: center;
+  opacity: 0.4;
+  transition: opacity var(--transition-fast);
+}
+
+.timeline-step--active {
+  opacity: 1;
+}
+
+.timeline-dot {
+  width: 1rem;
+  height: 1rem;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  transition: all var(--transition-fast);
+}
+
+.timeline-step--active .timeline-dot--pending {
+  background: var(--color-status-pending-bg);
+  border-color: var(--color-status-pending-text);
+}
+
+.timeline-step--active .timeline-dot--in-progress {
+  background: var(--color-status-in-progress-bg);
+  border-color: var(--color-status-in-progress-text);
+}
+
+.timeline-step--active .timeline-dot--completed {
+  background: var(--color-status-completed-bg);
+  border-color: var(--color-status-completed-text);
+}
+
+.timeline-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.timeline-step--active .timeline-label {
+  color: var(--color-text-secondary);
+}
+
+.timeline-date {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.timeline-line {
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2px;
+  background: var(--color-border);
+  margin-top: 0.45rem;
+  align-self: flex-start;
+}
+
+/* ── Timeline responsive: vertical en móvil ────────────── */
+@media (max-width: 500px) {
+  .mini-timeline {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+  }
+
+  .timeline-step {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    text-align: left;
+  }
+
+  .timeline-line {
+    width: 2px;
+    height: 1.5rem;
+    margin-top: 0;
+    margin-left: 0.45rem;
   }
 }
 </style>

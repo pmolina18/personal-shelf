@@ -62,6 +62,7 @@ class MediaItem(Base):
     )
     started_at: Mapped[datetime | None] = mapped_column(nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    pending_at: Mapped[datetime | None] = mapped_column(nullable=True)
 
     tags: Mapped[list[Tag]] = relationship(
         "Tag", secondary=media_tags, back_populates="media_items", lazy="selectin"

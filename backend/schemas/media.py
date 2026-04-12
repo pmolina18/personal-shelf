@@ -105,6 +105,7 @@ class MediaResponse(BaseModel):
     updated_at: datetime
     started_at: datetime | None
     completed_at: datetime | None
+    pending_at: datetime | None
 
 
 class MediaFilters(BaseModel):
