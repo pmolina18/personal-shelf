@@ -368,6 +368,8 @@
       class="overlay"
       @click="mobileOpen = false"
     />
+
+    <ReloadPrompt />
   </div>
 </template>
 
@@ -376,6 +378,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuth } from './composables/useAuth.js'
 import { getUnreadCount } from './api/recommendations.js'
+import ReloadPrompt from './components/ReloadPrompt.vue'
 
 const router = useRouter()
 const route = useRoute()

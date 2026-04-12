@@ -199,35 +199,6 @@
             </p>
             <div class="suggestion-card__footer">
               <span class="suggestion-card__author">by {{ item.username }}</span>
-              <a
-                v-if="item.github_issue_url"
-                :href="item.github_issue_url"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="suggestion-card__github-link"
-                aria-label="View GitHub issue"
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                  <polyline points="15 3 21 3 21 9" />
-                  <line
-                    x1="10"
-                    y1="14"
-                    x2="21"
-                    y2="3"
-                  />
-                </svg>
-                GitHub Issue
-              </a>
             </div>
           </article>
         </li>
@@ -620,23 +591,5 @@ onMounted(() => fetchAll())
   color: var(--color-text-muted);
 }
 
-.suggestion-card__github-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-size: 0.78rem;
-  font-weight: 500;
-  color: var(--color-primary);
-  text-decoration: none;
-  transition: color var(--transition-fast);
-}
 
-.suggestion-card__github-link:hover {
-  color: var(--color-primary-hover);
-}
-
-.suggestion-card__github-link:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 1px;
-}
 </style>
