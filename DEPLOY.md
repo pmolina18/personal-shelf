@@ -39,12 +39,15 @@ Arquitectura: Vercel (frontend) + Render (backend) + Neon.dev (PostgreSQL) + Clo
 
 4. Variables de entorno en Render (Environment → Add Environment Variable):
 
-   | Variable | Valor |
-   |---|---|
-   | `DATABASE_URL` | `postgresql+asyncpg://user:password@ep-xxx.neon.tech/neondb?ssl=require` |
-   | `ALLOWED_ORIGINS` | `https://shelfd.net,https://www.shelfd.net` |
-   | `JWT_SECRET_KEY` | (generar un string aleatorio largo, ej: `openssl rand -hex 32`) |
-   | `TMDB_API_KEY` | (tu API key de themoviedb.org, opcional) |
+   | Variable | Valor | Requerida |
+   |---|---|---|
+   | `DATABASE_URL` | `postgresql+asyncpg://user:password@ep-xxx.neon.tech/neondb?ssl=require` | Sí |
+   | `ALLOWED_ORIGINS` | `https://shelfd.net,https://www.shelfd.net` | Sí |
+   | `JWT_SECRET_KEY` | (generar un string aleatorio largo, ej: `openssl rand -hex 32`) | Sí |
+   | `TMDB_API_KEY` | (tu API key de themoviedb.org — para auto-descarga de carátulas) | Opcional |
+   | `GITHUB_TOKEN` | (Personal Access Token de GitHub — para integración con GitHub) | Opcional |
+   | `GITHUB_REPO` | (formato `owner/repo`, ej: `tu-usuario/personal-shelf`) | Opcional |
+   | `GITHUB_DEFAULT_BRANCH` | (rama por defecto, ej: `main` — solo si difiere de `main`) | Opcional |
 
 5. Deploy. Render arrancará el backend y verificará el health check en `/api/health`
 6. Anotar la URL del servicio (ej: `https://shelfd-api.onrender.com`)
@@ -142,7 +145,7 @@ curl -s https://shelfd.net | head -5
 
 - [ ] Neon.dev: proyecto creado, connection string copiada
 - [ ] Migraciones ejecutadas contra Neon.dev (`alembic upgrade head`)
-- [ ] Render: servicio creado con las 4 env vars
+- [ ] Render: servicio creado con las env vars (3 requeridas + 4 opcionales)
 - [ ] Render: health check responde 200
 - [ ] Vercel: proyecto importado con root `frontend`
 - [ ] Vercel: 2 env vars configuradas (VITE_API_BASE_URL, VITE_IMAGES_BASE_URL)

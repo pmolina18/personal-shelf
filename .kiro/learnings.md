@@ -934,3 +934,58 @@
 - Observation: Existing patterns held. Parallel subagent delegation (fastapi-backend-expert for tasks 1-5, vue-frontend-expert for tasks 8-9) completed all files without conflicts. Both subagents created correct implementations on the first attempt — no import pruning issues, no diagnostic errors across all 12 files (6 backend, 4 frontend, 2 modified). The `alembic upgrade head` from `backend/` applied cleanly (migration 004). The Alembic migration was already at head, confirming the migration file was correctly numbered after `003_add_recommendations_table`. The `GITHUB_REPO no está configurado` warning in uvicorn logs is expected (env var not set locally) and confirms the graceful degradation path works — suggestions create without GitHub issues when not configured. The OpenAPI spec confirmed all 3 endpoints registered (`POST /api/suggestions`, `GET /api/suggestions`, `GET /api/suggestions/mine`). The `/mine` route is declared before the catch-all `GET ""` in the router to avoid path conflicts — this is the correct FastAPI pattern for sub-paths. Reading `learnings.md` in full now requires 5 `readFile` calls with `start_line` offsets due to the file exceeding 900 lines.
 - Action: No changes needed. The parallel subagent pattern continues to work well for features with clear backend/frontend separation. For routers with sub-paths like `/mine`, always declare specific paths before catch-all paths in FastAPI to avoid routing conflicts. The learnings file archival is overdue — it now requires 5 reads per session.
 - Confidence: high
+
+**[2026-04-11] — Session: git push pending changes (two-commit grouping)**
+- Observation: Existing patterns held. The `git status --short` → selective `git add` → `git commit` → `git push` workflow worked without issues. Only `personal-shelf` had pending changes (21 files); `custom-powers` and `custom-mcps` were clean. Split into two commits: `feat:` (suggestion box code + new agents, 15 files) and `chore:` (spec docs + learnings + IDEAS + allowed_users, 6 files). Reading `learnings.md` in full now requires 5 `readFile` calls with `start_line` offsets (1→212, 213→362, 363→552, 553→697, 698→847, 847→end) due to the file exceeding 930 lines — consistent with the documented truncation pattern. No new technical issues discovered.
+- Action: No changes needed. Existing patterns confirmed. The learnings file archival is increasingly urgent — it now requires 5-6 reads per session start.
+- Confidence: high
+
+**[2026-04-11] — Documentation: DEPLOY.md env var audit**
+- Observation: Existing patterns held. The `config.py` file is the single source of truth for backend environment variables — all `os.getenv()` calls are centralized there. Three variables (`GITHUB_TOKEN`, `GITHUB_REPO`, `GITHUB_DEFAULT_BRANCH`) added in the suggestion-box feature were missing from `DEPLOY.md`, `.env.example`, and `render.yaml`. The frontend env vars (`VITE_API_BASE_URL`, `VITE_IMAGES_BASE_URL`) were already complete. The `grepSearch` tool with `includePattern` for `personal-shelf/backend/**` and `personal-shelf/frontend/src/**` returned no results — the double-workspace prefix requires using `personal-shelf/backend/**/*.py` explicitly or just reading `config.py` directly since it centralizes all env vars.
+- Action: After adding new `os.getenv()` calls to `config.py`, always update `DEPLOY.md` (Render env vars table), `.env.example`, and `render.yaml` in the same commit. Use `config.py` as the canonical reference for env var audits rather than grepping the full codebase.
+- Confidence: high
+
+**[2026-04-11] — Session: render.yaml explanation**
+- Observation: No new technical patterns discovered. The session was a Q&A about the purpose of `render.yaml` (Render Blueprints IaC). Existing deployment documentation and learnings held — no code changes, no new issues.
+- Action: No changes needed. Existing patterns confirmed.
+- Confidence: high
+
+**[2026-04-11] — Session: DATABASE_URL explanation**
+- Observation: No new technical patterns discovered. Q&A session explaining how to obtain the Neon.dev connection string and convert it to asyncpg format for Render. All information was already documented in DEPLOY.md section 1. Existing patterns held.
+- Action: No changes needed. Existing patterns confirmed.
+- Confidence: high
+
+**[2026-04-11] — Session: Neon.dev setup explanation**
+- Observation: No new technical patterns discovered. Q&A session explaining Neon.dev serverless PostgreSQL setup and migration execution. All information was already documented in DEPLOY.md section 1. Existing patterns held.
+- Action: No changes needed. Existing patterns confirmed.
+- Confidence: high
+
+**[2026-04-11] — Session: Vercel env vars location**
+- Observation: No new technical patterns discovered. Q&A explaining where to find environment variables in the Vercel dashboard (Settings → Environment Variables) and the build-time injection behavior of VITE_ variables. All information was already in DEPLOY.md section 3. Existing patterns held.
+- Action: No changes needed. Existing patterns confirmed.
+- Confidence: high
+
+**[2026-04-11] — Session: Render env vars location + ALLOWED_ORIGINS clarification**
+- Observation: No new technical patterns discovered. Q&A explaining Render dashboard env var location (Service → Environment). Clarified that `ALLOWED_ORIGINS` controls CORS origins (frontend domains making requests to the backend), so `api.shelfd.net` does not need to be in the list — only `shelfd.net` and `www.shelfd.net`. Existing patterns held.
+- Action: No changes needed. Existing patterns confirmed.
+- Confidence: high
+
+**[2026-04-12] — Debugging: production 400/500 on registration**
+- Observation: User reported a "400 Bad Request" on registration, but direct `curl` testing against `api.shelfd.net` revealed the actual error is a 500 Internal Server Error (not 400). The frontend's `catch` block displays a generic error message that can mask the real HTTP status code. The health check (`/api/health`) returned `{"status":"ok"}` because it only runs `SELECT 1` — it doesn't verify that application tables exist. The 500 is almost certainly caused by missing tables (Alembic migrations not run against Neon.dev). Testing with a non-allowed email correctly returned 403, confirming the `allowed_users` file is deployed and readable.
+- Action: When debugging production API errors, always `curl` the endpoint directly to see the real HTTP status code and response body — don't trust the frontend's error display. Consider enhancing the health check to verify at least one application table exists (e.g., `SELECT 1 FROM users LIMIT 0`) to catch missing-migration issues early. Always run `alembic upgrade head` against Neon before the first deploy.
+- Confidence: high
+
+**[2026-04-12] — Debugging: production 500 on Render despite local success**
+- Observation: After running Alembic migrations against Neon (all 4 applied, 9 tables confirmed via psql), registration works locally against the same Neon DB (`python -c` with anaconda Python) but returns 500 on Render. The health check passes because it only runs `SELECT 1` — it doesn't touch application tables. Login also returns 500, confirming the issue is not registration-specific but affects all queries against application tables. The most likely cause is a misconfigured `DATABASE_URL` in Render (missing `+asyncpg` prefix or wrong `ssl` parameter format). Render logs would show the exact traceback.
+- Action: When production returns 500 but local works against the same DB: (1) verify the exact `DATABASE_URL` string in Render matches the asyncpg format (`postgresql+asyncpg://...?ssl=require`), (2) check Render logs for the traceback, (3) remember that health check `SELECT 1` does not validate table access. For future deploys, consider adding a startup check that queries an application table.
+- Confidence: high
+
+**[2026-04-12] — Bugfix: passlib incompatible with Python 3.14 on Render**
+- Observation: Render's free tier uses Python 3.14. `passlib[bcrypt]` crashes on Python 3.14 with `ValueError: password cannot be longer than 72 bytes` during its internal `detect_wrap_bug()` check — this is a known issue in the abandoned `passlib` library. The error occurs on both `hash()` and `verify()` calls, making all auth endpoints (register, login) return 500. The fix was replacing `passlib[bcrypt]` with the `bcrypt` package directly, using `bcrypt.hashpw()` and `bcrypt.checkpw()`. Existing password hashes (`$2b$12$...`) are fully compatible with the native `bcrypt` library — no migration needed. A `legacy` placeholder user with an invalid hash was also cleaned up from the production DB.
+- Action: Never use `passlib` in new projects — it's abandoned and breaks on Python 3.13+. Use `bcrypt` directly for password hashing. When debugging production 500s, always check the Python version on the deployment platform — Render auto-selects the latest Python unless pinned via `runtime.txt` or `.python-version`. Consider adding a `.python-version` file to pin the Python version for Render.
+- Confidence: high
+
+**[2026-04-12] — Session: production DB cleanup**
+- Observation: No new technical patterns discovered. Deleted test user `pablo` from Neon production DB via psql so the real user can register fresh after the passlib→bcrypt fix is deployed. Existing patterns held (Postgres.app psql binary for direct DB access).
+- Action: No changes needed. Existing patterns confirmed.
+- Confidence: high

@@ -6,7 +6,6 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,9 +27,6 @@ from backend.schemas.auth import (
 from backend.services.allowed_users_service import AllowedUsersService
 
 
-_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-
 def _hash_password(password: str) -> str:
     """Hash a plain-text password using bcrypt.
 
@@ -40,7 +36,7 @@ def _hash_password(password: str) -> str:
     Returns:
         The bcrypt hash string.
     """
-    return _pwd_context.hash(password)
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def _verify_password(plain: str, hashed: str) -> bool:
@@ -53,7 +49,7 @@ def _verify_password(plain: str, hashed: str) -> bool:
     Returns:
         True if the password matches, False otherwise.
     """
-    return _pwd_context.verify(plain, hashed)
+    return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
 
 
 def _create_access_token(user_id: int) -> str:

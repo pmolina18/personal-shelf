@@ -14,3 +14,9 @@ services:
         generateValue: true
       - key: TMDB_API_KEY
         sync: false
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: GITHUB_REPO
+        sync: false
+      - key: GITHUB_DEFAULT_BRANCH
+        value: main
