@@ -124,10 +124,11 @@ Cada idea sigue este formato:
 
 ---
 
-## [IDEA-11] Progressive Web App (PWA)
+## [IDEA-11] Progressive Web App (PWA) ✅ COMPLETADA → `.kiro/specs/pwa/`
 
 - Tipo: feature
 - Prioridad: alta
+- Estado: Implementada el 2026-04-12. vite-plugin-pwa configurado con manifest, service worker (Workbox), runtime caching de fonts e imágenes, ReloadPrompt.vue para actualizaciones, iconos PWA, meta tags, y PWA_INSTALL.md con guía de instalación.
 - Descripción: Convertir la SPA Vue actual en una PWA para que los usuarios puedan "instalar" la app desde el navegador en iOS y Android, con icono en el home screen y sin barra del navegador. Es el paso más rápido para ofrecer experiencia móvil sin necesidad de publicar en stores.
 - Contexto: Requiere `vite-plugin-pwa` (plugin de Vite), un `manifest.json` (nombre, iconos, colores, start_url), un Service Worker para cache/offline básico, y meta tags en `index.html` (`<meta name="theme-color">`, `<link rel="manifest">`, `<meta name="apple-mobile-web-app-capable">`). El plugin genera el SW automáticamente. Los iconos se necesitan en varios tamaños (192x192, 512x512 mínimo).
 - Notas: No requiere cuenta de desarrollador de Apple ni Google. Funciona en iOS 16.4+ con push notifications. Limitación: no aparece en App Store ni Google Play (aunque PWABuilder puede generar paquetes para stores). Es el paso previo natural antes de Capacitor. Incluir un documento tipo `PWA_INSTALL.md` con instrucciones paso a paso para que los usuarios sepan cómo instalar la app en su móvil (iOS: Safari → Compartir → Añadir a pantalla de inicio; Android: Chrome → menú → Instalar app), con capturas o descripciones claras del proceso.
@@ -152,3 +153,13 @@ Cada idea sigue este formato:
 - Descripción: Permitir que el usuario pueda iniciar sesión tanto con su nombre de usuario como con su email. Actualmente el login solo acepta email; con este cambio, el campo de login aceptaría cualquiera de los dos y el backend resolvería si es un email (contiene `@`) o un username para buscar al usuario correspondiente.
 - Contexto: Archivos afectados: `backend/services/auth_service.py` (lógica de autenticación), `backend/routers/auth.py` (endpoint de login), `backend/schemas/auth.py` (schema de login request). En frontend: `frontend/src/views/LoginView.vue` (label y placeholder del campo). El modelo `User` ya tiene campos `username` y `email`, ambos únicos.
 - Notas: La detección puede ser simple: si el valor contiene `@` se busca por email, si no se busca por username. Considerar también actualizar el placeholder del input en el frontend a algo como "Email o nombre de usuario".
+
+---
+
+## [IDEA-14] Estado de sugerencias (feedback al usuario)
+
+- Tipo: feature
+- Prioridad: media
+- Descripción: Añadir un campo `status` al modelo de sugerencias (pending → in_progress → implemented → dismissed) con un badge visual en cada tarjeta de sugerencia. Permite que los usuarios vean si su idea fue implementada, está en progreso o fue descartada. Un endpoint PATCH protegido (solo admin) permite cambiar el estado.
+- Contexto: Archivos afectados: `backend/models/suggestion.py` (nuevo campo status), `backend/schemas/suggestion.py` (nuevo campo en response + schema de update), `backend/routers/suggestions.py` (endpoint PATCH), `backend/services/suggestion_service.py` (método update_status), `frontend/src/views/SuggestionsView.vue` (badge de estado en la card), migración Alembic. El patrón de badges por estado ya existe en MediaCard (pending/in_progress/completed) y se puede reutilizar el mismo CSS.
+- Notas: Reutilizar el patrón de colores de status que ya existe en las CSS custom properties (--color-status-pending-bg, etc.). Considerar también ocultar el link a GitHub issue mientras el repo sea privado (ya hecho). En el futuro, cuando el repo sea público, se puede re-añadir el link condicionalmente.
