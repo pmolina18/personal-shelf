@@ -364,7 +364,7 @@ function formatDate(iso) {
 async function onCreate(data) {
   try {
     const created = await create(data)
-    router.push(`/media/${created.id}`)
+    router.push('/')
   } catch (err) {
     itemError.value = err.message || 'Failed to create item'
   }
