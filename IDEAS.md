@@ -144,10 +144,11 @@ Cada idea sigue este formato:
 
 ---
 
-## [IDEA-13] Login con username o email
+## [IDEA-13] Login con username o email ✅ COMPLETADA → `.kiro/specs/login-username-email/`
 
 - Tipo: mejora
 - Prioridad: media
+- Estado: Implementada el 2026-04-12. Campo `identifier` en login acepta email o username, detección por `@`, tests actualizados + test nuevo para login por username.
 - Descripción: Permitir que el usuario pueda iniciar sesión tanto con su nombre de usuario como con su email. Actualmente el login solo acepta email; con este cambio, el campo de login aceptaría cualquiera de los dos y el backend resolvería si es un email (contiene `@`) o un username para buscar al usuario correspondiente.
 - Contexto: Archivos afectados: `backend/services/auth_service.py` (lógica de autenticación), `backend/routers/auth.py` (endpoint de login), `backend/schemas/auth.py` (schema de login request). En frontend: `frontend/src/views/LoginView.vue` (label y placeholder del campo). El modelo `User` ya tiene campos `username` y `email`, ambos únicos.
 - Notas: La detección puede ser simple: si el valor contiene `@` se busca por email, si no se busca por username. Considerar también actualizar el placeholder del input en el frontend a algo como "Email o nombre de usuario".
