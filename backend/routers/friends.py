@@ -12,6 +12,7 @@ from backend.schemas.social import (
     FriendRequestCreate,
     FriendRequestResponse,
     FriendResponse,
+    SentRequestResponse,
 )
 from backend.services.friend_service import FriendService
 
@@ -44,16 +45,17 @@ async def list_pending(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> list[FriendRequestResponse]:
-    """List pending friend requests received by the authenticated user.
-
-    Args:
-        user: Authenticated user.
-        session: Async database session.
-
-    Returns:
-        List of pending friend requests.
-    """
+    """List pending friend requests received by the authenticated user."""
     return await _friend_service.list_pending(session, user.id)
+
+
+@router.get("/requests/sent", response_model=list[SentRequestResponse])
+async def list_sent(
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> list[SentRequestResponse]:
+    """List pending friend requests sent by the authenticated user."""
+    return await _friend_service.list_sent(session, user.id)
 
 
 @router.post("/requests/{request_id}/accept")
@@ -129,18 +131,21 @@ async def remove_friend(
 
 @router.get("/search", response_model=list[FriendResponse])
 async def search_users(
-    q: str = Query(..., min_length=1),
+    q: str = Query("", min_length=0),
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> list[FriendResponse]:
     """Search users by username substring.
 
+    Returns up to 10 users. If q is empty, returns the first 10 users
+    (excluding the authenticated user).
+
     Args:
-        q: Search query string.
+        q: Search query string (optional, empty returns all).
         user: Authenticated user (excluded from results).
         session: Async database session.
 
     Returns:
-        List of matching users.
+        List of matching users (max 10).
     """
     return await _friend_service.search_users(session, user.id, q)

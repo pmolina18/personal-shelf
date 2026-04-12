@@ -161,15 +161,7 @@ class FriendService:
     async def list_pending(
         self, session: AsyncSession, user_id: int
     ) -> list[FriendRequestResponse]:
-        """List pending friend requests received by the user.
-
-        Args:
-            session: Async database session.
-            user_id: ID of the authenticated user.
-
-        Returns:
-            List of FriendRequestResponse for pending incoming requests.
-        """
+        """List pending friend requests received by the user."""
         result = await session.execute(
             select(FriendRequest)
             .where(
@@ -188,6 +180,36 @@ class FriendService:
                     id=req.id,
                     from_user=UserResponse(
                         id=sender.id, email=sender.email, username=sender.username
+                    ),
+                    created_at=req.created_at,
+                )
+            )
+        return responses
+
+    async def list_sent(
+        self, session: AsyncSession, user_id: int
+    ) -> list:
+        """List pending friend requests sent by the user."""
+        from backend.schemas.social import SentRequestResponse
+
+        result = await session.execute(
+            select(FriendRequest)
+            .where(
+                FriendRequest.from_user_id == user_id,
+                FriendRequest.status == "pending",
+            )
+            .order_by(FriendRequest.created_at.desc())
+        )
+        requests = result.scalars().all()
+
+        responses = []
+        for req in requests:
+            recipient = await session.get(User, req.to_user_id)
+            responses.append(
+                SentRequestResponse(
+                    id=req.id,
+                    to_user=UserResponse(
+                        id=recipient.id, email=recipient.email, username=recipient.username
                     ),
                     created_at=req.created_at,
                 )
@@ -255,7 +277,7 @@ class FriendService:
     async def search_users(
         self, session: AsyncSession, user_id: int, query: str
     ) -> list[FriendResponse]:
-        """Search users by username substring, excluding the searcher.
+        """Search users by username substring, excluding the searcher, existing friends, and pending requests.
 
         Args:
             session: Async database session.
@@ -263,13 +285,30 @@ class FriendService:
             query: Substring to search for (case-insensitive).
 
         Returns:
-            List of FriendResponse matching the query.
+            List of FriendResponse matching the query (max 10).
         """
-        result = await session.execute(
-            select(User).where(
-                User.username.ilike(f"%{query}%"),
-                User.id != user_id,
+        # IDs to exclude: existing friends
+        friend_rows = await session.execute(
+            select(friendships.c.friend_id).where(friendships.c.user_id == user_id)
+        )
+        friend_ids = {row[0] for row in friend_rows.all()}
+
+        # IDs to exclude: pending requests (sent or received)
+        pending_rows = await session.execute(
+            select(FriendRequest).where(
+                FriendRequest.status == "pending",
+                (FriendRequest.from_user_id == user_id) | (FriendRequest.to_user_id == user_id),
             )
         )
+        for req in pending_rows.scalars().all():
+            friend_ids.add(req.from_user_id if req.to_user_id == user_id else req.to_user_id)
+
+        exclude_ids = friend_ids | {user_id}
+
+        stmt = select(User).where(User.id.not_in(exclude_ids))
+        if query:
+            stmt = stmt.where(User.username.ilike(f"%{query}%"))
+        stmt = stmt.order_by(User.username).limit(10)
+        result = await session.execute(stmt)
         users = result.scalars().all()
         return [FriendResponse(id=u.id, username=u.username) for u in users]

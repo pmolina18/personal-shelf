@@ -17,10 +17,7 @@
       <h2 class="section-title">
         Find users
       </h2>
-      <form
-        class="search-row"
-        @submit.prevent="onSearch"
-      >
+      <div class="search-row">
         <input
           v-model="searchQuery"
           type="text"
@@ -28,14 +25,7 @@
           aria-label="Search users by username"
           class="search-input"
         >
-        <button
-          type="submit"
-          class="btn-search"
-          :disabled="!searchQuery.trim()"
-        >
-          Search
-        </button>
-      </form>
+      </div>
       <div
         v-if="searchError"
         class="inline-error"
@@ -54,11 +44,22 @@
         >
           <span class="user-name">{{ u.username }}</span>
           <button
-            class="btn-action btn-action--primary"
+            class="btn-add-friend"
             :disabled="sendingTo === u.id"
+            :aria-label="`Add ${u.username} as friend`"
             @click="onSendRequest(u)"
           >
-            {{ sendingTo === u.id ? 'Sending…' : 'Add friend' }}
+            <svg
+              v-if="sendingTo !== u.id"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+            ><path d="M12 5v14M5 12h14" /></svg>
+            <span v-else>…</span>
           </button>
         </li>
       </ul>
@@ -68,6 +69,26 @@
       >
         No users found.
       </p>
+    </div>
+
+    <!-- Sent requests (waiting for approval) -->
+    <div
+      v-if="sent.length"
+      class="friends-section"
+    >
+      <h2 class="section-title">
+        Sent requests
+      </h2>
+      <ul class="user-list">
+        <li
+          v-for="req in sent"
+          :key="req.id"
+          class="user-item"
+        >
+          <span class="user-name">{{ req.to_user.username }}</span>
+          <span class="badge-pending">Pending</span>
+        </li>
+      </ul>
     </div>
 
     <!-- Pending requests -->
@@ -164,10 +185,19 @@
             {{ f.username }}
           </router-link>
           <button
-            class="btn-action btn-action--danger"
+            class="btn-remove-friend"
+            :aria-label="`Remove ${f.username}`"
             @click="onRemoveFriend(f.id)"
           >
-            Remove
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+            ><path d="M5 12h14" /></svg>
           </button>
         </li>
       </ul>
@@ -176,11 +206,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import {
   searchUsers,
   sendFriendRequest,
   getPendingRequests,
+  getSentRequests,
   acceptRequest,
   rejectRequest,
   listFriends,
@@ -199,13 +230,15 @@ const pending = ref([])
 const pendingLoading = ref(false)
 const pendingError = ref('')
 
+// Sent requests
+const sent = ref([])
+
 // Friends
 const friends = ref([])
 const friendsLoading = ref(false)
 const friendsError = ref('')
 
 async function onSearch() {
-  if (!searchQuery.value.trim()) return
   searchError.value = ''
   searchDone.value = false
   try {
@@ -217,16 +250,36 @@ async function onSearch() {
   }
 }
 
+let debounceTimer = null
+
+watch(searchQuery, () => {
+  if (debounceTimer) clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(onSearch, 300)
+})
+
+onUnmounted(() => {
+  if (debounceTimer) clearTimeout(debounceTimer)
+})
+
 async function onSendRequest(user) {
   sendingTo.value = user.id
   searchError.value = ''
   try {
     await sendFriendRequest(user.username)
     searchResults.value = searchResults.value.filter(u => u.id !== user.id)
+    await fetchSent()
   } catch (err) {
     searchError.value = err.message || 'Failed to send request'
   } finally {
     sendingTo.value = null
+  }
+}
+
+async function fetchSent() {
+  try {
+    sent.value = await getSentRequests()
+  } catch {
+    // silent
   }
 }
 
@@ -285,6 +338,8 @@ async function onRemoveFriend(id) {
 onMounted(() => {
   fetchPending()
   fetchFriends()
+  fetchSent()
+  onSearch()
 })
 </script>
 
@@ -436,6 +491,52 @@ onMounted(() => {
   cursor: not-allowed;
 }
 
+.btn-add-friend {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+  border: none;
+  cursor: pointer;
+  transition: background var(--transition-fast), transform var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.btn-add-friend:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+  transform: scale(1.1);
+}
+
+.btn-add-friend:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-remove-friend {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-full);
+  background: var(--color-error-bg);
+  color: var(--color-error);
+  border: none;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.btn-remove-friend:hover {
+  background: var(--color-error);
+  color: var(--color-text-inverse);
+  transform: scale(1.1);
+}
+
 .btn-action--danger {
   background: var(--color-error-bg);
   color: var(--color-error);
@@ -464,5 +565,14 @@ onMounted(() => {
 .empty-hint {
   font-size: 0.85rem;
   color: var(--color-text-muted);
+}
+
+.badge-pending {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.15rem 0.55rem;
+  border-radius: var(--radius-full);
+  background: var(--color-status-pending-bg);
+  color: var(--color-status-pending-text);
 }
 </style>

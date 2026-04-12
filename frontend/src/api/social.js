@@ -47,6 +47,11 @@ export function getPendingRequests() {
   return request('/friends/requests/pending')
 }
 
+/** Get pending friend requests sent by the current user. */
+export function getSentRequests() {
+  return request('/friends/requests/sent')
+}
+
 /** Accept a pending friend request. */
 export function acceptRequest(id) {
   return request(`/friends/requests/${id}/accept`, { method: 'POST' })
@@ -70,7 +75,7 @@ export function removeFriend(id) {
 }
 
 /** Search users by username substring. */
-export function searchUsers(query) {
+export function searchUsers(query = '') {
   const qs = encodeURIComponent(query)
   return request(`/friends/search?q=${qs}`)
 }

@@ -34,6 +34,20 @@ class FriendRequestResponse(BaseModel):
     created_at: datetime
 
 
+class SentRequestResponse(BaseModel):
+    """Schema for serializing a sent friend request (pending).
+
+    Attributes:
+        id: Unique request identifier.
+        to_user: User who received the request.
+        created_at: When the request was created.
+    """
+
+    id: int
+    to_user: UserResponse
+    created_at: datetime
+
+
 class FriendResponse(BaseModel):
     """Schema for serializing a friend in API responses.
 
