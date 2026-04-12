@@ -141,3 +141,13 @@ Cada idea sigue este formato:
 - Descripción: Envolver la app Vue en un WebView nativo usando Capacitor (del equipo de Ionic) para publicarla en App Store y Google Play. Reutiliza el 95%+ del código frontend actual sin reescritura.
 - Contexto: Requiere `@capacitor/core` + `@capacitor/cli`, luego `npx cap add ios` + `npx cap add android`. El flujo es: `vite build` → `npx cap sync` → abrir Xcode (iOS) / Android Studio (Android) → compilar y publicar. Necesita cuenta de Apple Developer ($99/año) y Google Play Console ($25 una vez). Xcode ya disponible en el Mac actual.
 - Notas: El rendimiento es web-en-WebView, más que suficiente para una app de contenido (listas, cards, formularios). Da acceso a APIs nativas (push notifications, haptics, cámara) si se necesitan en el futuro. Tiene sentido hacerlo después de validar la experiencia móvil con la PWA (IDEA-11). Considerar si merece la pena el coste de las cuentas de desarrollador según el número de usuarios.
+
+---
+
+## [IDEA-13] Login con username o email
+
+- Tipo: mejora
+- Prioridad: media
+- Descripción: Permitir que el usuario pueda iniciar sesión tanto con su nombre de usuario como con su email. Actualmente el login solo acepta email; con este cambio, el campo de login aceptaría cualquiera de los dos y el backend resolvería si es un email (contiene `@`) o un username para buscar al usuario correspondiente.
+- Contexto: Archivos afectados: `backend/services/auth_service.py` (lógica de autenticación), `backend/routers/auth.py` (endpoint de login), `backend/schemas/auth.py` (schema de login request). En frontend: `frontend/src/views/LoginView.vue` (label y placeholder del campo). El modelo `User` ya tiene campos `username` y `email`, ambos únicos.
+- Notas: La detección puede ser simple: si el valor contiene `@` se busca por email, si no se busca por username. Considerar también actualizar el placeholder del input en el frontend a algo como "Email o nombre de usuario".

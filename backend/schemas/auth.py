@@ -27,11 +27,11 @@ class UserLogin(BaseModel):
     """Schema for user login.
 
     Attributes:
-        email: Registered email address.
+        identifier: Email address or username.
         password: Account password.
     """
 
-    email: str
+    identifier: str
     password: str
 
 

@@ -48,10 +48,10 @@ async def login(
     data: UserLogin,
     session: AsyncSession = Depends(get_session),
 ) -> TokenResponse:
-    """Authenticate with email and password.
+    """Authenticate with email or username and password.
 
     Args:
-        data: Login payload with email and password.
+        data: Login payload with identifier (email or username) and password.
         session: Async database session.
 
     Returns:

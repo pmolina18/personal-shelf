@@ -139,7 +139,7 @@ class AuthService:
 
         Args:
             session: Async database session.
-            data: Login payload with email and password.
+            data: Login payload with identifier (email or username) and password.
 
         Returns:
             TokenResponse with access_token, refresh_token, and user info.
@@ -147,7 +147,12 @@ class AuthService:
         Raises:
             HTTPException: 401 if credentials are invalid (generic message).
         """
-        result = await session.execute(select(User).where(User.email == data.email))
+        if "@" in data.identifier:
+            query = select(User).where(User.email == data.identifier)
+        else:
+            query = select(User).where(User.username == data.identifier)
+
+        result = await session.execute(query)
         user = result.scalar_one_or_none()
 
         if user is None or not _verify_password(data.password, user.password_hash):

@@ -42,8 +42,8 @@ function clearAuth() {
 
 // ── Public methods ──────────────────────────────────────────
 
-async function login(email, password) {
-  const data = await apiLogin(email, password)
+async function login(identifier, password) {
+  const data = await apiLogin(identifier, password)
   persistTokens(data.access_token, data.refresh_token, data.user)
   return data
 }

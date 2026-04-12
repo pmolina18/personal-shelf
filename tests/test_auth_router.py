@@ -141,7 +141,7 @@ async def test_login_success(client):
 
     resp = await client.post(
         "/api/auth/login",
-        json={"email": "login@example.com", "password": "securepass123"},
+        json={"identifier": "login@example.com", "password": "securepass123"},
     )
     assert resp.status_code == 200
     data = resp.json()
@@ -165,7 +165,7 @@ async def test_login_invalid_credentials(client):
 
     resp = await client.post(
         "/api/auth/login",
-        json={"email": "fail@example.com", "password": "wrongpassword"},
+        json={"identifier": "fail@example.com", "password": "wrongpassword"},
     )
     assert resp.status_code == 401
     assert "Invalid credentials" in resp.json()["detail"]
@@ -176,9 +176,31 @@ async def test_login_nonexistent_email(client):
     """POST /api/auth/login with non-existent email returns 401."""
     resp = await client.post(
         "/api/auth/login",
-        json={"email": "nobody@example.com", "password": "whatever123"},
+        json={"identifier": "nobody@example.com", "password": "whatever123"},
     )
     assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_login_with_username(client):
+    """POST /api/auth/login with username instead of email returns 200."""
+    await client.post(
+        "/api/auth/register",
+        json={
+            "email": "user@example.com",
+            "username": "myuser",
+            "password": "securepass123",
+        },
+    )
+
+    resp = await client.post(
+        "/api/auth/login",
+        json={"identifier": "myuser", "password": "securepass123"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["user"]["username"] == "myuser"
+    assert data["user"]["email"] == "user@example.com"
 
 
 # -- Refresh tests -------------------------------------------------------------

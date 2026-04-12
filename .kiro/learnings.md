@@ -1024,3 +1024,18 @@
 - Observation: After the user fixed `GITHUB_REPO` and redeployed, the request-access endpoint works correctly — returns 201 with a PR URL (https://github.com/pmolina18/personal-shelf/pull/1). The full allowed_users flow is validated end-to-end in production: non-allowed email → 403, request-access → creates GitHub PR (201), allowed email → registers successfully (201). The earlier 502 was confirmed to be caused by incorrect `GITHUB_REPO` value plus the need for a redeploy since `config.py` reads env vars at import time.
 - Action: No changes needed. The full auth + allowed_users + GitHub PR flow is production-validated. Existing patterns confirmed.
 - Confidence: high
+
+**[2026-04-12] — Bugfix: missing migration for recommendations.status column**
+- Observation: The `recommendations` table in Neon had `is_read` (boolean) from migration 003, but the model was later updated to use `status` (varchar 20) without generating a corresponding migration. This caused `UndefinedColumnError: column recommendations.status does not exist` on production. Created migration 005 to add `status`, migrate data (`is_read=true` → `accepted`, `is_read=false` → `pending`), drop `is_read`, and swap the index. The initial revision ID `005_recommendations_status_column` (37 chars) exceeded the `alembic_version.version_num` column limit of `varchar(32)`, causing `StringDataRightTruncationError`. Shortened to `005_rec_status` (14 chars) and it applied cleanly.
+- Action: When changing a model column (rename, type change), always generate a migration immediately — don't rely on the next feature migration to pick it up. Keep Alembic revision IDs short (under 32 chars) to fit the default `version_num` column. Use the pattern `NNN_short_desc` (e.g., `005_rec_status`) rather than full descriptive names.
+- Confidence: high
+
+**[2026-04-12] — Session: adding idea to IDEAS.md**
+- Observation: Existing patterns held. Simple append to IDEAS.md using `strReplace` on the last idea's final line worked cleanly. The learnings file is now over 1000 lines — `readMultipleFiles` with `skipPruning=true` still truncated it at ~212 lines. Used `readFile` with `start_line` to read the tail for appending. No new technical issues discovered.
+- Action: No changes needed. For reading large learnings files, use `readFile` with a high `start_line` to get the tail, rather than relying on `readMultipleFiles` which truncates. Existing patterns confirmed.
+- Confidence: high
+
+**[2026-04-12] — Spec structure: requirements.md es obligatorio**
+- Observation: Al crear la spec de IDEA-13 (login con username o email), salté directamente a `design.md` + `tasks.md` sin crear `requirements.md`. El usuario corrigió: el orden correcto es siempre REQUIREMENTS → DESIGN → TASKS. Los requirements documentan el "qué" y el "por qué", el design el "cómo", y las tasks el "en qué orden".
+- Action: Al crear cualquier spec, siempre crear los tres archivos en este orden: `requirements.md` (requisitos funcionales y no funcionales, contexto, fuera de alcance) → `design.md` (decisiones técnicas, cambios por archivo) → `tasks.md` (subtareas con checkboxes). Nunca saltarse requirements.
+- Confidence: high

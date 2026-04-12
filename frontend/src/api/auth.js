@@ -46,14 +46,14 @@ export function register(email, username, password) {
 
 /**
  * Log in with existing credentials.
- * @param {string} email
+ * @param {string} identifier - Email address or username.
  * @param {string} password
  * @returns {Promise<{ access_token: string, refresh_token: string, user: { id: number, email: string, username: string } }>}
  */
-export function login(email, password) {
+export function login(identifier, password) {
   return request('/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ identifier, password }),
   })
 }
 

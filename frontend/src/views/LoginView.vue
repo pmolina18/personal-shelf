@@ -28,17 +28,17 @@
 
         <div class="form-field">
           <label
-            for="login-email"
+            for="login-identifier"
             class="form-label"
-          >Email</label>
+          >Email or username</label>
           <input
-            id="login-email"
-            v-model="email"
-            type="email"
+            id="login-identifier"
+            v-model="identifier"
+            type="text"
             required
-            autocomplete="email"
-            placeholder="you@example.com"
-            aria-label="Email address"
+            autocomplete="username"
+            placeholder="you@example.com or username"
+            aria-label="Email or username"
             class="form-input"
           >
         </div>
@@ -87,7 +87,7 @@ import { useAuth } from '../composables/useAuth.js'
 const router = useRouter()
 const { login } = useAuth()
 
-const email = ref('')
+const identifier = ref('')
 const password = ref('')
 const error = ref('')
 const submitting = ref(false)
@@ -96,7 +96,7 @@ async function onSubmit() {
   error.value = ''
   submitting.value = true
   try {
-    await login(email.value, password.value)
+    await login(identifier.value, password.value)
     router.push('/')
   } catch (err) {
     error.value = err.message || 'Login failed'
