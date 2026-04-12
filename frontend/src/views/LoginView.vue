@@ -5,9 +5,34 @@
   >
     <div class="auth-card">
       <div class="auth-header">
-        <span class="auth-logo">📚</span>
+        <svg
+          class="auth-logo"
+          width="56"
+          height="56"
+          viewBox="0 0 32 32"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          aria-hidden="true"
+        >
+          <!-- bookmark -->
+          <path
+            d="M8 4 h16 v26 l-8 -5.5 l-8 5.5 Z"
+            stroke="var(--color-border)"
+            stroke-width="1.8"
+            stroke-linejoin="round"
+            fill="none"
+          />
+          <!-- play -->
+          <path
+            d="M13 11 L13 21 L22 16 Z"
+            fill="var(--color-primary)"
+            stroke="var(--color-primary)"
+            stroke-width="1"
+            stroke-linejoin="round"
+          />
+        </svg>
         <h1 class="auth-title">
-          Personal<span class="auth-title-accent">Shelf</span>
+          Shelf<span class="auth-title-accent">d</span>
         </h1>
         <p class="auth-subtitle">
           Sign in to your account
@@ -130,9 +155,8 @@ async function onSubmit() {
 }
 
 .auth-logo {
-  font-size: 2.5rem;
   display: block;
-  margin-bottom: 0.5rem;
+  margin: 0 auto 0.5rem;
 }
 
 .auth-title {

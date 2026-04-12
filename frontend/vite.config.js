@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: 'prompt',
       includeAssets: ['icons/icon-192x192.png', 'icons/icon-512x512.png'],
       manifest: {
-        name: 'Personal Shelf',
-        short_name: 'Shelf',
+        name: 'Shelfd',
+        short_name: 'Shelfd',
         description: 'Track and share your movies, series, and books',
         theme_color: '#4a90d9',
         background_color: '#ffffff',

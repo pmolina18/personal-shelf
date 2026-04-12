@@ -14,12 +14,37 @@
           class="brand"
           @click="mobileOpen = false"
         >
-          <span class="brand-logo">📚</span>
+          <svg
+            class="brand-logo"
+            width="28"
+            height="28"
+            viewBox="0 0 32 32"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+          >
+            <!-- bookmark -->
+            <path
+              d="M8 4 h16 v26 l-8 -5.5 l-8 5.5 Z"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linejoin="round"
+              fill="none"
+            />
+            <!-- play -->
+            <path
+              d="M13 11 L13 21 L22 16 Z"
+              fill="var(--color-primary)"
+              stroke="var(--color-primary)"
+              stroke-width="1"
+              stroke-linejoin="round"
+            />
+          </svg>
           <Transition name="fade-text">
             <span
               v-if="!collapsed"
               class="brand-name"
-            >Personal<span class="brand-accent">Shelf</span></span>
+            >Shelf<span class="brand-accent">d</span></span>
           </Transition>
         </router-link>
       </div>
@@ -545,7 +570,7 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; }
   white-space: nowrap;
 }
 
-.brand-logo { font-size: 1.35rem; flex-shrink: 0; }
+.brand-logo { flex-shrink: 0; color: var(--sidebar-text); }
 
 .brand-name {
   font-size: 1rem;
