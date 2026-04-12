@@ -15,6 +15,7 @@ const storedUser = localStorage.getItem('user')
 const user = ref(storedUser ? JSON.parse(storedUser) : null)
 
 const isAuthenticated = computed(() => !!accessToken.value)
+const isAdmin = computed(() => user.value?.is_admin ?? false)
 
 // ── Helpers ─────────────────────────────────────────────────
 
@@ -81,6 +82,7 @@ export function useAuth() {
     accessToken,
     refreshToken,
     isAuthenticated,
+    isAdmin,
     login,
     register,
     logout,

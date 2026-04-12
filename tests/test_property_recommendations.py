@@ -10,7 +10,12 @@ Valida: Requisitos 4.1, 4.2, 4.3, 4.7, 4.8, 4.9
 """
 from __future__ import annotations
 
+import asyncio
 
+import pytest
+from fastapi import HTTPException
+from hypothesis import given, settings
+from hypothesis import strategies as st
 from sqlalchemy import insert
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -21,6 +26,8 @@ from sqlalchemy.ext.asyncio import (
 from backend.models.media import Base, MediaItem
 from backend.models.recommendation import Recommendation  # noqa: F401
 from backend.models.user import User, friendships
+from backend.schemas.recommendation import RecommendationCreate
+from backend.services.recommendation_service import RecommendationService
 
 
 # ---------------------------------------------------------------------------

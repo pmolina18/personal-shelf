@@ -1,7 +1,7 @@
 """Servicio async para interactuar con la API REST de GitHub.
 
 Crea Pull Requests de solicitud de acceso para añadir emails
-al fichero allowed_users del repositorio.
+al fichero allowed_admins del repositorio.
 """
 
 from __future__ import annotations
@@ -14,7 +14,6 @@ import httpx
 from fastapi import HTTPException
 
 from backend.config import GITHUB_DEFAULT_BRANCH, GITHUB_REPO, GITHUB_TOKEN
-from backend.services.allowed_users_service import AllowedUsersService
 
 logger = logging.getLogger(__name__)
 
@@ -103,12 +102,12 @@ class GitHubService:
             return None
 
     async def create_access_request_pr(self, email: str) -> dict:
-        """Crea un PR que añade el email al fichero allowed_users.
+        """Crea un PR que añade el email al fichero allowed_admins.
 
         Pasos:
         1. Verificar que no existe un PR abierto para este email.
-        2. Obtener el contenido actual de allowed_users desde la rama principal.
-        3. Añadir el email al contenido usando AllowedUsersService.
+        2. Obtener el contenido actual de allowed_admins desde la rama principal.
+        3. Añadir el email al contenido usando AllowedAdminsService.
         4. Crear una rama nueva (access-request/<email-sanitizado>).
         5. Actualizar el fichero en la rama nueva con el email añadido.
         6. Crear el PR contra la rama principal.
@@ -132,14 +131,14 @@ class GitHubService:
                 )
 
             # 2. Obtener contenido actual del fichero
-            file_path = "allowed_users"
+            file_path = "allowed_admins"
             content, sha = await self._get_file_content(
                 file_path, self.default_branch
             )
 
             # 3. Añadir email al contenido
-            allowed_svc = AllowedUsersService()
-            new_content = allowed_svc.add_email(content, email)
+            admins_svc = AllowedAdminsService()
+            new_content = admins_svc.add_email(content, email)
 
             # 4. Crear rama nueva
             sanitized = self._sanitize_branch_name(email)
@@ -147,7 +146,7 @@ class GitHubService:
             await self._create_branch(branch_name, self.default_branch)
 
             # 5. Actualizar fichero en la rama nueva
-            commit_message = f"Añadir {email} a allowed_users"
+            commit_message = f"Añadir {email} a allowed_admins"
             await self._create_or_update_file(
                 file_path, new_content, sha, branch_name, commit_message
             )
@@ -155,9 +154,9 @@ class GitHubService:
             # 6. Crear PR
             title = f"Solicitud de acceso: {email}"
             body = (
-                f"Solicitud automática de acceso para {email}.\n\n"
+                f"Solicitud automática de acceso admin para {email}.\n\n"
                 "Mergea este PR para añadir el email a la lista de "
-                "usuarios permitidos."
+                "administradores."
             )
             pr_data = await self._create_pull_request(
                 title, body, branch_name, self.default_branch

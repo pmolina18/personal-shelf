@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.config import ALLOWED_ORIGINS, IMAGE_STORAGE_PATH, TMDB_API_KEY
 from backend.db import get_session
 from backend.models.media import MediaItem
+from backend.routers.admin import router as admin_router
 from backend.routers.auth import router as auth_router
 from backend.routers.explore import router as explore_router
 from backend.routers.feed import router as feed_router
@@ -34,6 +35,7 @@ app.add_middleware(
 )
 
 # Register API routers
+app.include_router(admin_router)
 app.include_router(auth_router)
 app.include_router(media_router)
 app.include_router(stats_router)

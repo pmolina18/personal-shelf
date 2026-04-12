@@ -36,8 +36,8 @@ JWT_ALGORITHM: str = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
-# Allowed users
-ALLOWED_USERS_PATH: Path = BASE_DIR.parent / "allowed_users"
+# Allowed admins
+ALLOWED_ADMINS_PATH: Path = BASE_DIR.parent / "allowed_admins"
 
 # GitHub integration
 GITHUB_TOKEN: str = os.getenv("GITHUB_TOKEN", "")

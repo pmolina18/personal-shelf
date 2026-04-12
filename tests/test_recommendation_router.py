@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 import pytest_asyncio
 import sqlalchemy as sa
 from sqlalchemy import insert

@@ -107,6 +107,32 @@
         />
 
         <router-link
+          v-if="isAdmin"
+          to="/admin"
+          class="nav-item"
+          :title="collapsed ? 'Admin' : undefined"
+          @click="mobileOpen = false"
+        >
+          <svg
+            class="nav-icon"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          ><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+          <Transition name="fade-text">
+            <span
+              v-if="!collapsed"
+              class="nav-label"
+            >Admin</span>
+          </Transition>
+        </router-link>
+
+        <router-link
           v-if="isAuthenticated"
           to="/explore"
           class="nav-item"
@@ -354,7 +380,7 @@ import ReloadPrompt from './components/ReloadPrompt.vue'
 const router = useRouter()
 const route = useRoute()
 const isAuthPage = computed(() => !!route.meta?.isAuth)
-const { user, isAuthenticated, logout } = useAuth()
+const { user, isAuthenticated, isAdmin, logout } = useAuth()
 
 const collapsed = ref(false)
 const mobileOpen = ref(false)

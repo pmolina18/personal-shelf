@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.config import JWT_ALGORITHM, JWT_SECRET_KEY
 from backend.db import get_session
 from backend.models.user import User
+from backend.services.allowed_admins_service import AllowedAdminsService
 
 _oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
@@ -54,4 +55,25 @@ async def get_current_user(
     if user is None:
         raise credentials_exception
 
+    return user
+
+
+async def require_admin(user: User = Depends(get_current_user)) -> User:
+    """Verify the authenticated user is an admin.
+
+    Args:
+        user: The authenticated user from get_current_user.
+
+    Returns:
+        The User instance if they are an admin.
+
+    Raises:
+        HTTPException: 403 if the user is not an admin.
+    """
+    service = AllowedAdminsService()
+    if not service.is_admin(user.email):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
     return user

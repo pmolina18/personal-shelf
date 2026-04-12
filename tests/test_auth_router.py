@@ -6,7 +6,6 @@ refresh (200), refresh invalid (401).
 Uses httpx.AsyncClient + ASGITransport with app.dependency_overrides.
 """
 
-from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
@@ -49,16 +48,11 @@ async def test_session():
 async def client(test_session):
     """Yield an httpx AsyncClient wired to the FastAPI app.
 
-    Patches AllowedUsersService.is_allowed to always return True so
-    existing registration tests are not blocked by the allowed-users gate.
+    Registration is now open (no allowlist gate), so no patching needed.
     """
     transport = ASGITransport(app=app)
-    with patch(
-        "backend.services.auth_service.AllowedUsersService.is_allowed",
-        return_value=True,
-    ):
-        async with AsyncClient(transport=transport, base_url="http://test") as c:
-            yield c
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        yield c
 
 
 # -- Registration tests -------------------------------------------------------

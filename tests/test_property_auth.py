@@ -42,24 +42,14 @@ from backend.services.auth_service import AuthService
 
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 
-# Patch AllowedUsersService.is_allowed to always return True for all property tests
-# that call AuthService.register() — the allowed-users gate is tested separately.
-_original_is_allowed = None
-
-
-def _always_allowed(self, email):
-    return True
+# Registration is now open (no allowlist gate), so no patching needed.
+# This fixture is kept as a no-op for backward compatibility with test structure.
 
 
 @pytest.fixture(autouse=True)
 def _bypass_allowed_users():
-    """Bypass the allowed-users check for all auth property tests."""
-    from backend.services.allowed_users_service import AllowedUsersService
-
-    original = AllowedUsersService.is_allowed
-    AllowedUsersService.is_allowed = _always_allowed
+    """No-op — registration is open, no allowlist gate to bypass."""
     yield
-    AllowedUsersService.is_allowed = original
 
 
 async def _fresh_session():
@@ -123,7 +113,7 @@ def test_p1_register_then_login_returns_valid_tokens(email, username, password):
             assert reg_result.user.username == username
 
             # Login with same credentials
-            login_data = UserLogin(email=email, password=password)
+            login_data = UserLogin(identifier=email, password=password)
             login_result = await svc.login(sess, login_data)
 
             assert login_result.access_token
@@ -254,14 +244,14 @@ def test_p5_invalid_credentials_rejected(email, username, password, wrong_passwo
 
             # Wrong password
             with pytest.raises(HTTPException) as exc_info:
-                await svc.login(sess, UserLogin(email=email, password=wrong_password))
+                await svc.login(sess, UserLogin(identifier=email, password=wrong_password))
             assert exc_info.value.status_code == 401
             assert "Invalid credentials" in exc_info.value.detail
 
             # Non-existent email
             with pytest.raises(HTTPException) as exc_info:
                 await svc.login(
-                    sess, UserLogin(email="nonexistent@x.com", password=password)
+                    sess, UserLogin(identifier="nonexistent@x.com", password=password)
                 )
             assert exc_info.value.status_code == 401
             assert "Invalid credentials" in exc_info.value.detail

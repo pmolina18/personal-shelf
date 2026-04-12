@@ -15,14 +15,14 @@ from backend.schemas.auth import (
     UserLogin,
     UserRegister,
 )
-from backend.services.allowed_users_service import AllowedUsersService
+from backend.services.allowed_admins_service import AllowedAdminsService
 from backend.services.auth_service import AuthService
 from backend.services.github_service import GitHubService
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 _auth_service = AuthService()
-_allowed_users_service = AllowedUsersService()
+_allowed_admins_service = AllowedAdminsService()
 _github_service = GitHubService()
 
 
@@ -102,7 +102,7 @@ async def request_access(data: AccessRequest) -> AccessRequestResponse:
             detail="El servicio de solicitud de acceso no está disponible.",
         )
 
-    if _allowed_users_service.is_allowed(data.email):
+    if _allowed_admins_service.is_admin(data.email):
         raise HTTPException(
             status_code=409,
             detail="El email ya tiene acceso. Puedes registrarte directamente.",

@@ -42,11 +42,13 @@ class UserResponse(BaseModel):
         id: Unique user identifier.
         email: User email address.
         username: User display name.
+        is_admin: Whether the user is an administrator.
     """
 
     id: int
     email: str
     username: str
+    is_admin: bool = False
 
 
 class TokenResponse(BaseModel):

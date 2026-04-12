@@ -1,7 +1,7 @@
-"""Servicio para leer y validar emails contra el fichero allowed_users.
+"""Servicio para leer y validar emails contra el fichero allowed_admins.
 
-Lee, parsea y serializa el fichero de texto plano que controla qué
-emails pueden registrarse en la aplicación.
+Lee, parsea y serializa el fichero de texto plano que determina qué
+emails corresponden a administradores de la aplicación.
 """
 
 from __future__ import annotations
@@ -9,24 +9,24 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from backend.config import ALLOWED_USERS_PATH
+from backend.config import ALLOWED_ADMINS_PATH
 
 logger = logging.getLogger(__name__)
 
 
-class AllowedUsersService:
-    """Lee y valida emails contra el fichero allowed_users."""
+class AllowedAdminsService:
+    """Lee y valida emails contra el fichero allowed_admins."""
 
     def __init__(self, filepath: Path | None = None) -> None:
-        """Inicializa con la ruta al fichero de usuarios permitidos.
+        """Inicializa con la ruta al fichero de administradores.
 
         Args:
-            filepath: Ruta al fichero. Si es None, usa ALLOWED_USERS_PATH de config.
+            filepath: Ruta al fichero. Si es None, usa ALLOWED_ADMINS_PATH de config.
         """
-        self.filepath = filepath if filepath is not None else ALLOWED_USERS_PATH
+        self.filepath = filepath if filepath is not None else ALLOWED_ADMINS_PATH
 
-    def is_allowed(self, email: str) -> bool:
-        """Comprueba si el email está en la lista de permitidos (case-insensitive).
+    def is_admin(self, email: str) -> bool:
+        """Comprueba si el email está en la lista de admins (case-insensitive).
 
         Lee el fichero del disco en cada llamada para reflejar cambios
         inmediatamente tras un merge + redeploy.
@@ -35,16 +35,16 @@ class AllowedUsersService:
             email: Dirección de email a verificar.
 
         Returns:
-            True si el email está en la lista, False en caso contrario.
+            True si el email está en la lista de admins, False en caso contrario.
         """
         try:
             content = self.filepath.read_text(encoding="utf-8")
         except FileNotFoundError:
-            logger.error("Fichero allowed_users no encontrado: %s", self.filepath)
+            logger.error("Fichero allowed_admins no encontrado: %s", self.filepath)
             return False
 
-        allowed = self.parse(content)
-        return email.strip().lower() in allowed
+        admins = self.parse(content)
+        return email.strip().lower() in admins
 
     def parse(self, content: str) -> list[str]:
         """Parsea el contenido del fichero a una lista de emails.

@@ -25,7 +25,7 @@ from backend.schemas.auth import (
     UserRegister,
     UserResponse,
 )
-from backend.services.allowed_users_service import AllowedUsersService
+from backend.services.allowed_admins_service import AllowedAdminsService
 
 
 def _hash_password(password: str) -> str:
@@ -84,7 +84,7 @@ def _create_refresh_token(user_id: int) -> str:
 class AuthService:
     """Handles user registration, login, and token refresh."""
 
-    _allowed_users_service = AllowedUsersService()
+    _allowed_admins_service = AllowedAdminsService()
 
     async def register(self, session: AsyncSession, data: UserRegister) -> TokenResponse:
         """Register a new user and return tokens.
@@ -99,13 +99,6 @@ class AuthService:
         Raises:
             HTTPException: 409 if email or username already exists.
         """
-        # Verificar que el email está en la lista de usuarios permitidos
-        if not self._allowed_users_service.is_allowed(data.email):
-            raise HTTPException(
-                status_code=403,
-                detail="No estás en la lista de usuarios permitidos. Solicita acceso para ser añadido.",
-            )
-
         # Check duplicate email
         result = await session.execute(select(User).where(User.email == data.email))
         if result.scalar_one_or_none() is not None:
@@ -128,10 +121,12 @@ class AuthService:
         access_token = _create_access_token(user.id)
         refresh_token = _create_refresh_token(user.id)
 
+        is_admin = self._allowed_admins_service.is_admin(user.email)
+
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
-            user=UserResponse(id=user.id, email=user.email, username=user.username),
+            user=UserResponse(id=user.id, email=user.email, username=user.username, is_admin=is_admin),
         )
 
     async def login(self, session: AsyncSession, data: UserLogin) -> TokenResponse:
@@ -161,10 +156,12 @@ class AuthService:
         access_token = _create_access_token(user.id)
         refresh_token = _create_refresh_token(user.id)
 
+        is_admin = self._allowed_admins_service.is_admin(user.email)
+
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
-            user=UserResponse(id=user.id, email=user.email, username=user.username),
+            user=UserResponse(id=user.id, email=user.email, username=user.username, is_admin=is_admin),
         )
 
     async def refresh(self, session: AsyncSession, data: RefreshRequest) -> TokenPairResponse:

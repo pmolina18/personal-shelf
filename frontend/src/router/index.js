@@ -10,6 +10,7 @@ const FriendCollectionView = () => import('../views/FriendCollectionView.vue')
 const RecommendationsView = () => import('../views/RecommendationsView.vue')
 const ExploreView = () => import('../views/ExploreView.vue')
 const SuggestionsView = () => import('../views/SuggestionsView.vue')
+const AdminView = () => import('../views/AdminView.vue')
 
 const routes = [
   // Auth routes (public)
@@ -27,6 +28,7 @@ const routes = [
   { path: '/friends/:id/collection', name: 'friend-collection', component: FriendCollectionView },
   { path: '/recommendations', name: 'recommendations', component: RecommendationsView },
   { path: '/suggestions', name: 'suggestions', component: SuggestionsView },
+  { path: '/admin', name: 'admin', component: AdminView, meta: { requiresAdmin: true } },
 ]
 
 const router = createRouter({
@@ -45,6 +47,18 @@ router.beforeEach((to) => {
   // Unauthenticated user hitting protected pages → redirect to login
   if (!to.meta.isAuth && !isAuthenticated) {
     return { name: 'login' }
+  }
+
+  // Admin-only route: check is_admin from stored user object
+  if (to.meta.requiresAdmin) {
+    try {
+      const storedUser = JSON.parse(localStorage.getItem('user') || '{}')
+      if (!storedUser.is_admin) {
+        return { name: 'catalog' }
+      }
+    } catch {
+      return { name: 'catalog' }
+    }
   }
 })
 
