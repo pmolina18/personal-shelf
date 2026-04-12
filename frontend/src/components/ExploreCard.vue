@@ -1,5 +1,5 @@
 <template>
-  <article :class="['explore-card', `type-${item.media_type}`]">
+  <article :class="['explore-card', `type-${item.media_type}`, { 'explore-card--active': item.friends_reading && item.friends_reading.length > 0 }]">
     <div class="explore-card__image">
       <img
         :src="imageUrl"
@@ -79,12 +79,12 @@
         >+{{ item.tags.length - 3 }}</span>
       </div>
       <div
-        v-if="item.friends_have > 0 || item.friends_recommended > 0"
+        v-if="item.friends_reading?.length > 0 || item.friends_have > 0 || item.friends_recommended > 0"
         class="explore-card__social"
       >
         <span
-          v-if="item.friends_have > 0"
-          class="explore-card__signal"
+          v-if="item.friends_reading?.length > 0"
+          class="explore-card__signal explore-card__signal--active explore-card__signal--has-tooltip"
         >
           <svg
             width="12"
@@ -100,7 +100,56 @@
             cy="7"
             r="4"
           /></svg>
-          {{ item.friends_have }} amigos lo tienen
+          {{ activityText }}
+          <span class="explore-card__tooltip">
+            <template v-if="item.friends_who_have?.length > 0">
+              <span class="explore-card__tooltip-title">{{ item.media_type === 'book' ? '📖 Lo han leído' : '🎬 Lo han visto' }}</span>
+              <span
+                v-for="fr in item.friends_who_have"
+                :key="'have-' + fr.user_id"
+                class="explore-card__tooltip-name"
+              >{{ fr.username }}</span>
+            </template>
+            <template v-if="item.friends_reading?.length > 0">
+              <span class="explore-card__tooltip-title explore-card__tooltip-title--reading">👀 {{ item.media_type === 'book' ? 'Leyendo ahora' : 'Viendo ahora' }}</span>
+              <span
+                v-for="fr in item.friends_reading"
+                :key="'reading-' + fr.user_id"
+                class="explore-card__tooltip-name explore-card__tooltip-name--reading"
+              >{{ fr.username }}</span>
+            </template>
+          </span>
+        </span>
+        <span
+          v-else-if="item.friends_have > 0"
+          class="explore-card__signal explore-card__signal--has-tooltip"
+        >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          ><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle
+            cx="9"
+            cy="7"
+            r="4"
+          /></svg>
+          {{ item.friends_have }} {{ item.friends_have === 1 ? 'amigo' : 'amigos' }} {{ haveVerb }}
+          <span
+            v-if="item.friends_who_have?.length > 0"
+            class="explore-card__tooltip"
+          >
+            <span class="explore-card__tooltip-title">{{ item.media_type === 'book' ? '📖 Lo han leído' : '🎬 Lo han visto' }}</span>
+            <span
+              v-for="fr in item.friends_who_have"
+              :key="'have2-' + fr.user_id"
+              class="explore-card__tooltip-name"
+            >{{ fr.username }}</span>
+          </span>
         </span>
         <span
           v-if="item.friends_recommended > 0"
@@ -116,7 +165,7 @@
             stroke-linecap="round"
             stroke-linejoin="round"
           ><path d="M20 12v10H4V12" /><path d="M2 7h20v5H2z" /><path d="M12 22V7" /><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" /><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" /></svg>
-          {{ item.friends_recommended }} amigos te lo recomendaron
+          {{ item.friends_recommended }} {{ item.friends_recommended === 1 ? 'amigo' : 'amigos' }} te lo {{ item.friends_recommended === 1 ? 'ha' : 'han' }} recomendado
         </span>
       </div>
     </div>
@@ -152,6 +201,31 @@ async function onAdd() {
 
 const typeLabels = { movie: 'Movie', book: 'Book', series: 'Series' }
 const typeLabel = computed(() => typeLabels[props.item.media_type] || props.item.media_type)
+
+// Señales sociales — verbo contextual por tipo de media
+const haveVerb = computed(() => {
+  const n = props.item.friends_have
+  if (props.item.media_type === 'book') return n === 1 ? 'lo ha leído' : 'lo han leído'
+  return n === 1 ? 'lo ha visto' : 'lo han visto'
+})
+
+// Indicadores de actividad de amigos
+const activityVerb = computed(() => props.item.media_type === 'book' ? 'leyendo' : 'viendo')
+
+const activityText = computed(() => {
+  const friends = props.item.friends_reading
+  if (!friends || friends.length === 0) return ''
+  const verb = activityVerb.value
+  const n = friends.length
+  return `${n} ${n === 1 ? 'amigo' : 'amigos'} lo ${n === 1 ? 'está' : 'están'} ${verb}`
+})
+
+const activityAriaLabel = computed(() => {
+  const friends = props.item.friends_reading
+  if (!friends || friends.length === 0) return ''
+  const names = friends.map(f => f.username).join(', ')
+  return `Amigos ${activityVerb.value} este item: ${names}`
+})
 
 const placeholders = {
   movie: 'https://placehold.co/300x450/1a2e22/4ead6b?text=🎬&font=raleway',
@@ -295,6 +369,62 @@ const imageUrl = computed(() => {
 
 .explore-card__signal--recommended {
   color: var(--color-rating);
+}
+
+.explore-card__signal--active {
+  color: var(--color-success);
+}
+
+.explore-card--active {
+  box-shadow: 0 0 0 1.5px var(--color-primary-light);
+}
+
+.explore-card__signal--has-tooltip {
+  position: relative;
+  cursor: default;
+}
+
+.explore-card__tooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  background: var(--sidebar-bg);
+  color: var(--color-text-inverse);
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.6rem;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  z-index: 20;
+  box-shadow: var(--shadow-md);
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.explore-card__signal--has-tooltip:hover .explore-card__tooltip {
+  display: flex;
+}
+
+.explore-card__tooltip-title {
+  font-weight: 600;
+  font-size: 0.68rem;
+  opacity: 0.8;
+  margin-bottom: 0.1rem;
+}
+
+.explore-card__tooltip-name {
+  font-weight: 500;
+  color: var(--color-primary-light);
+}
+
+.explore-card__tooltip-title--reading {
+  margin-top: 0.3rem;
+  padding-top: 0.3rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.explore-card__tooltip-name--reading {
+  color: var(--color-success-bg);
 }
 
 .explore-card__add-btn {

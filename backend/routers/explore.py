@@ -27,7 +27,7 @@ _image_service = ImageService()
 _media_service = MediaService()
 _metadata_service = MetadataService()
 
-_VALID_SORTS = {"title_asc", "title_desc", "friends"}
+_VALID_SORTS = {"title_asc", "title_desc", "friends", "activity"}
 
 
 @router.get("", response_model=ExploreResult)
@@ -61,7 +61,7 @@ async def list_explore(
     if sort not in _VALID_SORTS:
         raise HTTPException(
             status_code=400,
-            detail="Invalid sort. Allowed: title_asc, title_desc, friends",
+            detail="Invalid sort. Allowed: title_asc, title_desc, friends, activity",
         )
 
     mt_value = media_type.value if media_type is not None else None

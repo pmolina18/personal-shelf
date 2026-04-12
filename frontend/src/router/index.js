@@ -5,7 +5,6 @@ const MediaDetailView = () => import('../views/MediaDetailView.vue')
 const StatsView = () => import('../views/StatsView.vue')
 const LoginView = () => import('../views/LoginView.vue')
 const RegisterView = () => import('../views/RegisterView.vue')
-const FeedView = () => import('../views/FeedView.vue')
 const FriendsView = () => import('../views/FriendsView.vue')
 const FriendCollectionView = () => import('../views/FriendCollectionView.vue')
 const RecommendationsView = () => import('../views/RecommendationsView.vue')
@@ -22,7 +21,7 @@ const routes = [
   { path: '/media/new', name: 'media-create', component: MediaDetailView },
   { path: '/media/:id', name: 'media-detail', component: MediaDetailView },
   { path: '/stats', name: 'stats', component: StatsView },
-  { path: '/feed', name: 'feed', component: FeedView },
+  { path: '/feed', redirect: '/explore' },
   { path: '/explore', name: 'explore', component: ExploreView },
   { path: '/friends', name: 'friends', component: FriendsView },
   { path: '/friends/:id/collection', name: 'friend-collection', component: FriendCollectionView },

@@ -11,8 +11,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models.media import MediaItem
 from backend.models.recommendation import Recommendation
-from backend.models.user import friendships
-from backend.schemas.explore import ExploreAddRequest, ExploreItem, ExploreResult
+from backend.models.user import User, friendships
+from backend.schemas.explore import (
+    ExploreAddRequest,
+    ExploreItem,
+    ExploreResult,
+    FriendReading,
+)
 from backend.schemas.media import MediaResponse, MediaStatus
 from backend.services.media_service import _to_response
 
@@ -64,6 +69,7 @@ class ExploreService:
 
         # --- 2. Build social signal lookup dicts ---
         have_map: dict[tuple[str, str], int] = {}
+        who_have_map: dict[tuple[str, str], list[FriendReading]] = {}
         rec_map: dict[tuple[str, str], int] = {}
 
         if friend_ids:
@@ -80,6 +86,33 @@ class ExploreService:
             have_result = await session.execute(have_q)
             for row in have_result.all():
                 have_map[(row[0], row[1])] = row[2]
+
+            # friends_who_have: list of friends owning each (lower_title, type)
+            # Only includes friends with completed status (excludes in_progress and pending)
+            who_have_q = (
+                select(
+                    func.lower(MediaItem.title).label("lt"),
+                    MediaItem.media_type,
+                    MediaItem.user_id,
+                    User.username,
+                )
+                .join(User, MediaItem.user_id == User.id)
+                .where(
+                    MediaItem.user_id.in_(friend_ids),
+                    MediaItem.status == "completed",
+                )
+                .group_by(
+                    func.lower(MediaItem.title),
+                    MediaItem.media_type,
+                    MediaItem.user_id,
+                    User.username,
+                )
+            )
+            who_have_result = await session.execute(who_have_q)
+            for row in who_have_result.all():
+                key = (row[0], row[1])
+                entry = FriendReading(user_id=row[2], username=row[3])
+                who_have_map.setdefault(key, []).append(entry)
 
             # friends_recommended: count distinct friends who recommended to user
             rec_q = (
@@ -100,8 +133,36 @@ class ExploreService:
             for row in rec_result.all():
                 rec_map[(row[0], row[1])] = row[2]
 
-        # --- 3. Fetch all items (with optional filters) ---
-        items_q = select(MediaItem)
+        # friends_reading: amigos con items in_progress coincidentes
+        reading_map: dict[tuple[str, str], list[FriendReading]] = {}
+        if friend_ids:
+            reading_q = (
+                select(
+                    func.lower(MediaItem.title).label("lt"),
+                    MediaItem.media_type,
+                    MediaItem.user_id,
+                    User.username,
+                )
+                .join(User, MediaItem.user_id == User.id)
+                .where(
+                    MediaItem.user_id.in_(friend_ids),
+                    MediaItem.status == "in_progress",
+                )
+                .group_by(
+                    func.lower(MediaItem.title),
+                    MediaItem.media_type,
+                    MediaItem.user_id,
+                    User.username,
+                )
+            )
+            reading_result = await session.execute(reading_q)
+            for row in reading_result.all():
+                key = (row[0], row[1])
+                entry = FriendReading(user_id=row[2], username=row[3])
+                reading_map.setdefault(key, []).append(entry)
+
+        # --- 3. Fetch friend items only (in_progress or completed, with optional filters) ---
+        items_q = select(MediaItem).where(MediaItem.user_id.in_(friend_ids), MediaItem.status.in_(["in_progress", "completed"])) if friend_ids else select(MediaItem).where(MediaItem.id < 0)
 
         if media_type is not None:
             items_q = items_q.where(MediaItem.media_type == media_type)
@@ -151,6 +212,8 @@ class ExploreService:
                     tags=[t.name for t in item.tags] if item.tags else [],
                     friends_have=fh,
                     friends_recommended=fr,
+                    friends_reading=reading_map.get(key, []),
+                    friends_who_have=who_have_map.get(key, []),
                 )
             )
 
@@ -168,6 +231,14 @@ class ExploreService:
         elif sort == "friends":
             deduped.sort(
                 key=lambda x: (-(x.friends_have + x.friends_recommended), x.title.lower())
+            )
+        elif sort == "activity":
+            deduped.sort(
+                key=lambda x: (
+                    -len(x.friends_reading),
+                    -(x.friends_have + x.friends_recommended),
+                    x.title.lower(),
+                )
             )
         else:
             # title_asc (default)

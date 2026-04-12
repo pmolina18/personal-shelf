@@ -7,6 +7,17 @@ from pydantic import BaseModel, ConfigDict, Field
 from backend.schemas.media import MediaType
 
 
+class FriendReading(BaseModel):
+    """Un amigo que está consumiendo activamente un item.
+
+    Attributes:
+        user_id: ID del amigo.
+        username: Nombre de usuario del amigo.
+    """
+
+    user_id: int
+    username: str
+
 
 class ExploreItem(BaseModel):
     """A deduplicated media item in the global catalog.
@@ -31,6 +42,8 @@ class ExploreItem(BaseModel):
     tags: list[str] = Field(default_factory=list)
     friends_have: int = 0
     friends_recommended: int = 0
+    friends_reading: list[FriendReading] = Field(default_factory=list)
+    friends_who_have: list[FriendReading] = Field(default_factory=list)
 
 
 class ExploreResult(BaseModel):

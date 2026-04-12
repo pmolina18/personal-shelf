@@ -154,6 +154,9 @@
             <option value="friends">
               By Friends
             </option>
+            <option value="activity">
+              Por actividad
+            </option>
           </select>
           <svg
             class="field-chevron"
