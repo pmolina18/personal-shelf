@@ -1,0 +1,12 @@
+{
+  "name": "Vue Lint on Agent Stop",
+  "description": "After agent execution ends, checks if any .vue or .js files in frontend/ were edited and runs ESLint --fix only on those files.",
+  "version": "2",
+  "when": {
+    "type": "agentStop"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Check if you edited any .vue or .js files under frontend/ during this session. If yes, run: npx eslint --fix <file> --config frontend/eslint.config.js for each edited file. If no frontend files were edited, do nothing and say 'No Vue/JS files changed — skipping lint.'"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "Validate Schemas on Agent Stop",
+  "description": "After agent execution ends, checks if any Pydantic schema files (backend/schemas/*.py) were edited and runs the related property tests (Properties 1,2,7,8,9) only on those changes.",
+  "version": "2",
+  "when": {
+    "type": "agentStop"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Check if you edited any files matching backend/schemas/*.py during this session. If yes, run: python -m pytest tests/ -x --tb=short -q -k 'property_1 or property_2 or property_7 or property_8 or property_9' 2>&1 | tail -20. If no schema files were edited, do nothing and say 'No schema changes — skipping validation.'"
+  }
+}

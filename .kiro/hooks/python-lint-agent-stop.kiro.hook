@@ -1,0 +1,12 @@
+{
+  "name": "Python Lint on Agent Stop",
+  "description": "After agent execution ends, checks if any .py files were edited and runs ruff check --fix only on those files.",
+  "version": "2",
+  "when": {
+    "type": "agentStop"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Check if you edited any .py files during this session. If yes, run ruff check --fix on each edited .py file individually. If no .py files were edited, do nothing and say 'No Python files changed — skipping lint.'"
+  }
+}
