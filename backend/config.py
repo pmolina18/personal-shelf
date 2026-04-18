@@ -40,3 +40,7 @@ ALLOWED_ADMINS_PATH: Path = BASE_DIR.parent / "allowed_admins"
 GITHUB_TOKEN: str = os.getenv("GITHUB_TOKEN", "")
 GITHUB_REPO: str = os.getenv("GITHUB_REPO", "")
 GITHUB_DEFAULT_BRANCH: str = os.getenv("GITHUB_DEFAULT_BRANCH", "main")
+
+# Spotify API (Client Credentials)
+SPOTIFY_CLIENT_ID: str = os.getenv("SPOTIFY_CLIENT_ID", "")
+SPOTIFY_CLIENT_SECRET: str = os.getenv("SPOTIFY_CLIENT_SECRET", "")

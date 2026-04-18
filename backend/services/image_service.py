@@ -62,6 +62,9 @@ class ImageService:
                 return url
             return await self._search_tmdb(title, "movie")
 
+        if media_type == "podcast":
+            return await self._search_spotify_image(title)
+
         tmdb_type = "tv" if media_type == "series" else "movie"
         url = await self._search_tmdb(title, tmdb_type)
         if url:
@@ -133,4 +136,39 @@ class ImageService:
             return f"https://covers.openlibrary.org/b/id/{cover_id}-L.jpg"
         except Exception:
             logger.exception("Open Library search failed for '%s'", title)
+            return None
+
+    async def _search_spotify_image(self, title: str) -> str | None:
+        """Search Spotify for a podcast cover image.
+
+        Args:
+            title: The podcast title to search for.
+
+        Returns:
+            A cover image URL, or None if not found.
+        """
+        from backend.services.spotify_auth import get_spotify_token
+
+        token = await get_spotify_token()
+        if not token:
+            return None
+
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.get(
+                    "https://api.spotify.com/v1/search",
+                    params={"type": "show", "q": title, "limit": 1},
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+                resp.raise_for_status()
+                data = resp.json()
+
+            shows = data.get("shows", {}).get("items", [])
+            if not shows:
+                return None
+
+            images = shows[0].get("images") or []
+            return images[0]["url"] if images else None
+        except Exception:
+            logger.exception("Spotify image search failed for '%s'", title)
             return None

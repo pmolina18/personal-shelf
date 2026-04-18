@@ -19,6 +19,7 @@ class MediaType(str, Enum):
     movie = "movie"
     book = "book"
     series = "series"
+    podcast = "podcast"
 
 
 class MediaStatus(str, Enum):

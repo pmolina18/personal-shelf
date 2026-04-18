@@ -94,7 +94,7 @@ const props = defineProps({
   },
 })
 
-const typeLabels = { movie: 'Movie', book: 'Book', series: 'Series' }
+const typeLabels = { movie: 'Movie', book: 'Book', series: 'Series', podcast: 'Podcast' }
 const statusLabels = { pending: 'Pending', in_progress: 'In Progress', completed: 'Completed' }
 
 const typeLabel = computed(() => typeLabels[props.item.media_type] || props.item.media_type)
@@ -104,6 +104,7 @@ const placeholders = {
   movie: 'https://placehold.co/300x450/1a2e22/4ead6b?text=🎬&font=raleway',
   book: 'https://placehold.co/300x450/1a2e22/4ead6b?text=📖&font=raleway',
   series: 'https://placehold.co/300x450/1a2e22/4ead6b?text=📺&font=raleway',
+  podcast: 'https://placehold.co/300x450/1a2e22/4ead6b?text=🎙️&font=raleway',
 }
 
 const imageUrl = computed(() => {
@@ -127,6 +128,7 @@ const imageUrl = computed(() => {
 .media-card.type-movie { border-color: var(--color-type-movie-border); background: var(--color-type-movie-bg); }
 .media-card.type-series { border-color: var(--color-type-series-border); background: var(--color-type-series-bg); }
 .media-card.type-book { border-color: var(--color-type-book-border); background: var(--color-type-book-bg); }
+.media-card.type-podcast { border-color: var(--color-border-podcast, #ce93d8); background: var(--color-type-podcast-bg, #f3e5f5); }
 
 .media-card:hover {
   transform: translateY(-6px);

@@ -222,6 +222,67 @@ async def _seed_books(
     return created
 
 
+async def _fetch_spotify_podcasts() -> list[dict]:
+    """Fetch popular podcasts from Spotify across categories."""
+    from backend.services.spotify_auth import get_spotify_token
+
+    token = await get_spotify_token()
+    if not token:
+        logger.warning("Spotify credentials not set, skipping podcasts")
+        return []
+
+    categories = ["true crime", "technology", "comedy", "science"]
+    results = []
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            for cat in categories:
+                resp = await client.get(
+                    "https://api.spotify.com/v1/search",
+                    params={"type": "show", "q": cat, "limit": 15},
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+                resp.raise_for_status()
+                shows = resp.json().get("shows", {}).get("items", [])
+                results.extend(shows)
+    except Exception:
+        logger.exception("Failed to fetch Spotify podcasts")
+    return results
+
+
+async def _seed_podcasts(
+    session, user_id: int, shows: list[dict], existing: set[tuple[str, str]]
+) -> int:
+    """Create MediaItems from Spotify show results, skipping duplicates."""
+    created = 0
+    for show in shows:
+        title = show.get("name") or ""
+        if not title:
+            continue
+        key = (title.lower(), "podcast")
+        if key in existing:
+            continue
+
+        publisher = show.get("publisher") or None
+        images = show.get("images") or []
+        image_url = images[0]["url"] if images else None
+
+        item = MediaItem(
+            user_id=user_id,
+            title=title,
+            media_type="podcast",
+            status="pending",
+            creator=publisher,
+            image_path=image_url,
+        )
+        session.add(item)
+        await session.flush()
+
+        existing.add(key)
+        created += 1
+
+    return created
+
+
 async def main() -> None:
     """Run the seed process: fetch external data and populate the DB."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -230,19 +291,21 @@ async def main() -> None:
         user = await _get_or_create_system_user(session)
         existing = await _existing_keys(session, user.id)
 
-        movies_raw, series_raw, books_raw = await asyncio.gather(
+        movies_raw, series_raw, books_raw, podcasts_raw = await asyncio.gather(
             _fetch_tmdb_movies(),
             _fetch_tmdb_series(),
             _fetch_open_library_books(),
+            _fetch_spotify_podcasts(),
         )
 
         n_movies = await _seed_tmdb_items(session, user.id, movies_raw, "movie", existing)
         n_series = await _seed_tmdb_items(session, user.id, series_raw, "series", existing)
         n_books = await _seed_books(session, user.id, books_raw, existing)
+        n_podcasts = await _seed_podcasts(session, user.id, podcasts_raw, existing)
 
         await session.commit()
 
-    print(f"Created {n_movies} movies, {n_series} series, {n_books} books")
+    print(f"Created {n_movies} movies, {n_series} series, {n_books} books, {n_podcasts} podcasts")
 
 
 if __name__ == "__main__":

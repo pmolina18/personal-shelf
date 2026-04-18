@@ -66,6 +66,9 @@ class MetadataService:
             if media_type == "book":
                 return await self._search_open_library_metadata(title)
 
+            if media_type == "podcast":
+                return await self._search_spotify_metadata(title)
+
             tmdb_type = "tv" if media_type == "series" else "movie"
             return await self._search_tmdb_metadata(title, tmdb_type)
         except Exception:
@@ -281,4 +284,62 @@ class MetadataService:
             return candidates
         except Exception:
             logger.exception("Open Library metadata search failed for '%s'", title)
+            return []
+
+    async def _search_spotify_metadata(
+        self, title: str
+    ) -> list[MetadataCandidate]:
+        """Busca podcasts (shows) en Spotify y extrae metadatos.
+
+        Args:
+            title: Título del podcast a buscar.
+
+        Returns:
+            Lista de hasta 5 MetadataCandidate. Lista vacía si no hay
+            resultados, credenciales faltantes, o error.
+        """
+        from backend.services.spotify_auth import get_spotify_token
+
+        token = await get_spotify_token()
+        if not token:
+            return []
+
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.get(
+                    "https://api.spotify.com/v1/search",
+                    params={"type": "show", "q": title, "limit": _MAX_CANDIDATES},
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+                resp.raise_for_status()
+                data = resp.json()
+
+            shows = data.get("shows", {}).get("items", [])[:_MAX_CANDIDATES]
+            if not shows:
+                return []
+
+            candidates: list[MetadataCandidate] = []
+            for show in shows:
+                candidate_title = show.get("name") or ""
+                publisher = show.get("publisher") or None
+                description = (show.get("description") or "")[:500] or None
+
+                # Imagen: primera (mayor resolución)
+                images = show.get("images") or []
+                image_url = images[0]["url"] if images else None
+
+                candidates.append(
+                    MetadataCandidate(
+                        title=candidate_title,
+                        year=None,
+                        creator=publisher,
+                        description=description,
+                        image_url=image_url,
+                        genres=[],
+                    )
+                )
+
+            return candidates
+        except Exception:
+            logger.exception("Spotify metadata search failed for '%s'", title)
             return []

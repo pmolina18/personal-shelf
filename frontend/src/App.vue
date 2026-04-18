@@ -479,6 +479,11 @@ function onLogout() {
   --color-type-book-bg: #faf5eb;
   --color-type-book-border: #e2d0a8;
 
+  --color-type-podcast: #9b59b6;
+  --color-type-podcast-bg: #f3e5f5;
+  --color-type-podcast-text: #6a1b9a;
+  --color-border-podcast: #ce93d8;
+
   --color-error: #d93025;
   --color-error-bg: #fef0ef;
   --color-success: #1a7a3a;

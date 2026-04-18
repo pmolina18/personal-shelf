@@ -237,12 +237,14 @@ const mediaTypes = [
   { value: 'movie', label: 'Movie', icon: '🎬' },
   { value: 'series', label: 'Series', icon: '📺' },
   { value: 'book', label: 'Book', icon: '📖' },
+  { value: 'podcast', label: 'Podcast', icon: '🎙️' },
 ]
 
 const titlePlaceholders = {
   movie: 'e.g. The Shawshank Redemption',
   series: 'e.g. Breaking Bad',
   book: 'e.g. 1984',
+  podcast: 'e.g. The Joe Rogan Experience',
 }
 
 const titlePlaceholder = computed(() => titlePlaceholders[form.media_type] || 'Pick a type first…')

@@ -93,6 +93,9 @@
           <option value="series">
             Series
           </option>
+          <option value="podcast">
+            Podcast
+          </option>
         </select>
         <svg
           class="field-chevron"

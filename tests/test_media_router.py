@@ -107,7 +107,7 @@ async def test_create_media_missing_title_returns_422(client):
 async def test_create_media_invalid_type_returns_422(client):
     """Invalid media_type triggers a validation error."""
     resp = await client.post(
-        "/api/media", json={"title": "Test", "media_type": "podcast"},
+        "/api/media", json={"title": "Test", "media_type": "magazine"},
     )
     assert resp.status_code == 422
 

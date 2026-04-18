@@ -20,3 +20,7 @@ services:
         sync: false
       - key: GITHUB_DEFAULT_BRANCH
         value: main
+      - key: SPOTIFY_CLIENT_ID
+        sync: false
+      - key: SPOTIFY_CLIENT_SECRET
+        sync: false
