@@ -1,6 +1,6 @@
 # Personal Shelf (Shelfd) — Wiki
 
-Personal Shelf es una plataforma social de **Media Tracking**: una aplicación web para catalogar películas, libros y series, hacer seguimiento de tu progreso, puntuar, etiquetar, descubrir contenido a través de amigos y obtener estadísticas de tu colección.
+Personal Shelf es una plataforma social de **Media Tracking**: una aplicación web para catalogar películas, libros, series y podcasts, hacer seguimiento de tu progreso, puntuar, etiquetar, descubrir contenido a través de amigos y obtener estadísticas de tu colección.
 
 ---
 
@@ -35,10 +35,11 @@ Personal Shelf es una plataforma social de **Media Tracking**: una aplicación w
     Vercel (prod)                 ├── MCP Server (herramientas IA)
                                  ├── TMDB API (metadata + imágenes externas)
                                  ├── Open Library API (metadata + portadas externas)
+                                 ├── Spotify API (metadata + imágenes de podcasts)
                                  └── GitHub API (sugerencias + acceso)
 ```
 
-El frontend en desarrollo corre en Vite (:5173) y hace proxy de `/api` al backend FastAPI (:8000). En producción, el frontend se despliega en Vercel y el backend en Render, con PostgreSQL en Neon.dev y DNS en Cloudflare. Las imágenes se sirven directamente desde las CDN externas de TMDB y Open Library (no hay almacenamiento local).
+El frontend en desarrollo corre en Vite (:5173) y hace proxy de `/api` al backend FastAPI (:8000). En producción, el frontend se despliega en Vercel y el backend en Render, con PostgreSQL en Neon.dev y DNS en Cloudflare. Las imágenes se sirven directamente desde las CDN externas de TMDB, Open Library y Spotify (no hay almacenamiento local).
 
 ---
 
@@ -52,7 +53,7 @@ El frontend en desarrollo corre en Vite (:5173) y hace proxy de `/api` al backen
 | Base de datos | PostgreSQL 16 + asyncpg (Neon.dev en producción) |
 | Migraciones | Alembic (async) |
 | Autenticación | JWT (python-jose) + bcrypt |
-| APIs externas | TMDB (películas/series), Open Library (libros), GitHub API (sugerencias/acceso) |
+| APIs externas | TMDB (películas/series), Open Library (libros), Spotify (podcasts), GitHub API (sugerencias/acceso) |
 | Tests | pytest, Hypothesis (property-based), vitest + vue-test-utils (frontend) |
 | Linting | Ruff (Python), ESLint + eslint-plugin-vue (JS/Vue) |
 | MCP | mcp (Python) — herramientas para asistentes IA |
@@ -112,8 +113,9 @@ personal-shelf/
 │       ├── auth_service.py           # Registro, login, JWT, bcrypt
 │       ├── media_service.py          # CRUD + filtros + paginación + tags
 │       ├── stats_service.py          # Agregaciones y estadísticas
-│       ├── image_service.py          # URLs de imágenes externas (TMDB + Open Library)
-│       ├── metadata_service.py       # Búsqueda de metadatos (TMDB + Open Library)
+│       ├── image_service.py          # URLs de imágenes externas (TMDB + Open Library + Spotify)
+│       ├── metadata_service.py       # Búsqueda de metadatos (TMDB + Open Library + Spotify)
+│       ├── spotify_auth.py           # Token Spotify (Client Credentials flow, caché en memoria)
 │       ├── friend_service.py         # Solicitudes, amistades, búsqueda de usuarios
 │       ├── feed_service.py           # Feed social + colección de amigo
 │       ├── recommendation_service.py # Envío/listado/aceptar/descartar recomendaciones
@@ -302,7 +304,7 @@ Todos los endpoints (excepto auth y health) requieren header `Authorization: Bea
 
 | Parámetro | Tipo | Descripción |
 |-----------|------|-------------|
-| `media_type` | `movie` / `book` / `series` | Filtrar por tipo |
+| `media_type` | `movie` / `book` / `series` / `podcast` | Filtrar por tipo |
 | `status` | `pending` / `in_progress` / `completed` | Filtrar por estado |
 | `search` | string | Búsqueda por título (case-insensitive) |
 | `tag` | string | Filtrar por nombre de tag |
@@ -378,7 +380,7 @@ Incluye: métricas de usuarios (total, nuevos/activos esta semana), métricas de
 
 ### Imágenes
 
-Las imágenes se almacenan como URLs externas directas en `image_path` (e.g. `https://image.tmdb.org/t/p/w500/...`, `https://covers.openlibrary.org/b/id/...-L.jpg`). El `ImageService` busca la imagen en TMDB (películas/series) u Open Library (libros) y devuelve la URL externa sin descargar nada a disco. El frontend las muestra directamente desde las CDN de origen.
+Las imágenes se almacenan como URLs externas directas en `image_path` (e.g. `https://image.tmdb.org/t/p/w500/...`, `https://covers.openlibrary.org/b/id/...-L.jpg`). El `ImageService` busca la imagen en TMDB (películas/series), Open Library (libros) o Spotify (podcasts) y devuelve la URL externa sin descargar nada a disco. El frontend las muestra directamente desde las CDN de origen.
 
 ---
 
@@ -513,6 +515,8 @@ cd frontend && npm run test
 | `GITHUB_TOKEN` | `""` | Personal Access Token de GitHub (sugerencias + acceso) |
 | `GITHUB_REPO` | `""` | Repositorio GitHub (formato `owner/repo`) |
 | `GITHUB_DEFAULT_BRANCH` | `main` | Rama por defecto del repo |
+| `SPOTIFY_CLIENT_ID` | `""` | Client ID de Spotify (metadatos + imágenes de podcasts) |
+| `SPOTIFY_CLIENT_SECRET` | `""` | Client Secret de Spotify (Client Credentials flow) |
 | `VITE_API_BASE_URL` | (solo producción) | URL base del backend para el frontend |
 | `VITE_IMAGES_BASE_URL` | (solo producción) | URL base para imágenes locales (obsoleta — las imágenes ahora son URLs externas directas) |
 
@@ -537,7 +541,7 @@ cd frontend && npm run test
 | id | INTEGER PK | Autoincrement |
 | user_id | INTEGER FK | → users.id, NOT NULL |
 | title | VARCHAR(255) | NOT NULL |
-| media_type | VARCHAR(20) | `movie`, `book`, `series` |
+| media_type | VARCHAR(20) | `movie`, `book`, `series`, `podcast` |
 | status | VARCHAR(20) | `pending`, `in_progress`, `completed` (default: pending) |
 | rating | INTEGER | Nullable, 1-10 |
 | year | INTEGER | Nullable |
@@ -630,9 +634,11 @@ Ver `DEPLOY.md` para la guía completa paso a paso.
 - El backend usa SQLAlchemy 2.0 async con `asyncpg`. Todas las queries son async.
 - Alembic está configurado para async con el patrón `async_engine_from_config` + `run_async_migrations()`.
 - Los tags usan una relación many-to-many con `lazy="selectin"` para evitar N+1 queries.
-- Las imágenes se obtienen como URLs externas de TMDB (películas/series) y Open Library (libros). `ImageService.fetch_image()` retorna `str | None` (URL completa o None). No hay almacenamiento local de imágenes — `image_path` en la DB contiene directamente la URL externa. Esto elimina problemas con filesystems efímeros (Render) y simplifica el despliegue.
+- Las imágenes se obtienen como URLs externas de TMDB (películas/series), Open Library (libros) y Spotify (podcasts). `ImageService.fetch_image()` retorna `str | None` (URL completa o None). No hay almacenamiento local de imágenes — `image_path` en la DB contiene directamente la URL externa. Esto elimina problemas con filesystems efímeros (Render) y simplifica el despliegue.
 - El frontend (`resolveImageUrl()` en `media.js`) detecta URLs que empiezan con `http` y las pasa directamente, por lo que el cambio a URLs externas fue transparente.
-- Los metadatos (año, creador, descripción, géneros) se autocompletan desde TMDB (películas/series) y Open Library (libros) al crear un item.
+- Los metadatos (año, creador, descripción, géneros) se autocompletan desde TMDB (películas/series), Open Library (libros) y Spotify (podcasts) al crear un item.
+- La integración con Spotify usa el flujo Client Credentials (sin login de usuario). El token se cachea en memoria con renovación automática 60s antes de expirar (`spotify_auth.py`). Tanto `MetadataService` como `ImageService` comparten el mismo helper `get_spotify_token()`.
+- El tipo `podcast` en el frontend usa un color scheme púrpura (#9b59b6) con soporte en `App.vue` (CSS custom properties), `MediaCard.vue`, `ExploreCard.vue`, `FilterBar.vue` y `MediaForm.vue`.
 - La autenticación usa JWT con access token (30 min) y refresh token (7 días). Las contraseñas se hashean con bcrypt.
 - Multi-tenancy: cada usuario solo ve y modifica sus propios items. Los servicios filtran por `user_id` en todas las operaciones.
 - Las amistades son bidireccionales: al aceptar una solicitud se insertan dos filas en `friendships` (A→B y B→A).

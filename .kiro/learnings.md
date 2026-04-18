@@ -1354,3 +1354,21 @@
 - Action: When adding a new media_type that uses a different external API, the pattern is: (1) add to enum, (2) create auth helper if the API needs tokens, (3) add routing in MetadataService.search() and ImageService._search_image_url(), (4) update frontend labels/filters/colors. Everything else (CRUD, recommendations, explore, stats, tags) works automatically because it's driven by the enum.
 - Confidence: high
 
+
+**[2026-04-18] — Session: advisory on Spotify credentials setup**
+- Observation: No code changes. User asked how to provide Spotify Client ID and Secret. Explained that the spec can be implemented without credentials (services return [] / None when env vars are empty), and credentials are only needed for live testing. The Spotify Developer Dashboard is free and immediate — no review process for Client Credentials flow. Existing patterns held.
+- Action: No changes needed. Proceed with spec execution in the next session.
+- Confidence: high
+
+
+**[2026-04-18] — Session: production DB migration check + Neon.dev connection**
+- Observation: User asked to verify if the production DB needs migration. Local DB was at `006_add_pending_at`, code has migrations up to `007_image_path_to_external_urls`. The MCP postgres server was configured with `user:password@localhost` (incorrect credentials) — failed with "role 'user' does not exist". Used psql via Postgres.app binary as fallback (consistent with existing pattern). The production Neon.dev `DATABASE_URL` is not stored in any local file (correct security practice — it's only in Render env vars). The Render backend responded with 404 on all routes including `/api/health`, suggesting the deployed code may be outdated or misconfigured. User offered to provide a new Neon.dev connection string to run migrations directly.
+- Action: To run migrations against production Neon.dev, the user needs to provide the `DATABASE_URL` in `.env` and then run `DATABASE_URL=<neon_url> python -m alembic upgrade head` from `backend/`. The MCP postgres config should be updated from `user:password` to `postgres:postgres` for local use. For production DB checks, always have the Neon.dev connection string available — consider storing it in `.env` with a comment (it's gitignored).
+- Confidence: high
+
+
+**[2026-04-18] — Task execution: spotify-podcasts tasks 1-6**
+- Observation: Adding a new media_type was straightforward — the enum-driven architecture meant most of the system (CRUD, recommendations, explore, stats, tags) worked automatically. The only test that broke was `test_create_media_invalid_type_returns_422` which used `"podcast"` as the invalid type example — changed to `"magazine"`. The Spotify Client Credentials flow uses `base64(client_id:client_secret)` in the Authorization header, not query params. Created a shared `spotify_auth.py` module with module-level token cache (`_token`, `_expires_at`) to avoid duplicating auth logic between MetadataService and ImageService — both use lazy imports (`from backend.services.spotify_auth import get_spotify_token`) to avoid circular dependencies. The vue-frontend-expert subagent handled all 5 frontend files in a single delegation without issues. Parallel execution (backend direct + frontend subagent) was efficient.
+- Action: When adding a new media_type, always grep for the old types used as "invalid" examples in tests — they may now be valid. For external API auth with token caching, use module-level variables rather than class attributes to share across multiple service instances. Use lazy imports for cross-service dependencies to avoid circular import issues.
+- Confidence: high
+
