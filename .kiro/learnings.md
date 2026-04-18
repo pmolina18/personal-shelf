@@ -1320,3 +1320,19 @@
 - Observation: Running `alembic current` and `alembic upgrade head` against Neon.dev works cleanly from the agent by setting `DATABASE_URL` inline before the command. Neon was on migration 005, needed 006 (`pending_at` column). The `ssl=require` parameter in the asyncpg connection string is required for Neon. The migration applied in under 2 seconds. Existing patterns held — the DEPLOY.md instructions for running migrations against Neon are accurate.
 - Action: For future Neon migrations, use `DATABASE_URL="..." python -m alembic current` to check state first, then `alembic upgrade head` to apply. Always verify with `current` before upgrading to avoid surprises. Remind user to rotate credentials if shared in chat.
 - Confidence: high
+
+**[2026-04-18] — Steering files: description field required in front-matter**
+- Observation: Kiro warns "Progressive steering file missing description" when a steering file's front-matter lacks a `description` field. The warning appeared for `self-learning.md` (inclusion: auto) but all 5 steering files were missing it. Adding `description: "..."` to the front-matter resolves the warning. The `description` field is separate from `inclusion` and `fileMatchPattern` — it's a human-readable summary shown in the Kiro UI.
+- Action: Always include a `description` field in steering file front-matter alongside `inclusion` (and `fileMatchPattern` if applicable). When creating new steering files, use the full template: `inclusion`, `description`, and optionally `fileMatchPattern`.
+- Confidence: high
+
+**[2026-04-18] — Custom subagent creation: docs-wiki-expert + agentStop hook**
+- Observation: Existing patterns held. Created a documentation-specialist subagent (`docs-wiki-expert`) at `.kiro/agents/docs-wiki-expert.md` following the same frontmatter format as existing agents (name, description, tools). The agent is scoped to WIKI.md, DEPLOY.md, IDEAS.md, and PWA_INSTALL.md, with explicit rules for the wiki's 14-section structure, Spanish language, and source-of-truth file inventory. Also created an `agentStop` hook (`update-wiki-session-end`) that checks `git diff HEAD` + `git status` for code changes and delegates to the docs-wiki-expert only when relevant code changed (not just docs/learnings/steering). The hook correctly skipped wiki update this session since only documentation and config files changed. No new technical issues discovered.
+- Action: For documentation automation, the `agentStop` hook + specialized subagent pattern works well. The hook's prompt should explicitly filter out doc-only changes to avoid unnecessary wiki rewrites. The subagent file at `.kiro/agents/<name>.md` is auto-discovered by Kiro — no additional registration needed.
+- Confidence: high
+
+**[2026-04-18] — Session: advisory on ephemeral filesystem image storage**
+- Observation: No code changes. User asked about the image persistence problem on Render's ephemeral filesystem. Reviewed the full image flow (ImageService → local disk → serve_image endpoint → frontend resolveImageUrl) and proposed three options: (1) store external API URLs directly instead of downloading, (2) Cloudflare R2 for persistent object storage, (3) rely on the existing re-download-on-demand in serve_image. The existing `serve_image` endpoint already has partial re-download logic but adds latency. The session was purely advisory — no implementation was done. Existing patterns held.
+- Action: When the user decides on an approach, the implementation scope varies: Option 1 (URLs only) touches ImageService + _to_response + frontend resolveImageUrl. Option 2 (R2) touches ImageService + serve_image + config + requirements.txt + render.yaml env vars. Option 3 is already partially implemented. No changes needed until the user picks a direction.
+- Confidence: high
+

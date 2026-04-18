@@ -1,6 +1,7 @@
 ---
 inclusion: fileMatch
 fileMatchPattern: "backend/models/**/*.py,backend/migrations/**/*.py,backend/db.py"
+description: Database conventions for SQLAlchemy models, migrations, and DB config
 ---
 
 # Database Conventions — Media Tracker

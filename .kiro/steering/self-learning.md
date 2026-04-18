@@ -1,5 +1,6 @@
 ---
 inclusion: auto
+description: Self-learning system that reads and updates learnings at session start/end
 ---
 
 # Self-Learning System

@@ -1,6 +1,7 @@
 ---
 inclusion: fileMatch
 fileMatchPattern: "backend/**/*.py"
+description: Python backend standards for FastAPI, SQLAlchemy, and service layer patterns
 ---
 
 # Python Backend Standards — Media Tracker

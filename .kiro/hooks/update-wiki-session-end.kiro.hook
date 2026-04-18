@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Actualizar Wiki al finalizar sesión",
+  "description": "Al finalizar una sesión del agente, revisa los cambios realizados durante la sesión y actualiza WIKI.md si hay cambios relevantes (nuevos endpoints, modelos, migraciones, componentes, tests, configuración). Delega al subagente docs-wiki-expert.",
+  "version": "1",
+  "when": {
+    "type": "agentStop"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Revisa los cambios realizados durante esta sesión usando `git diff HEAD` y `git status`. Si hay cambios relevantes en el código (nuevos endpoints, modelos, migraciones, componentes, tests, variables de entorno, configuración de despliegue), delega al subagente `docs-wiki-expert` para que actualice WIKI.md con las secciones afectadas. Si los únicos cambios son en documentación, learnings, o steering files, no hace falta actualizar la wiki. Sé eficiente: solo actualiza las secciones que realmente cambiaron."
+  }
+}

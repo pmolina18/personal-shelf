@@ -1,6 +1,7 @@
 ---
 inclusion: fileMatch
 fileMatchPattern: "backend/tests/**/*.py"
+description: Testing conventions for Hypothesis property tests and pytest patterns
 ---
 
 # Testing Conventions — Media Tracker

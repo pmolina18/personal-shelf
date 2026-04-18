@@ -1,6 +1,7 @@
 ---
 inclusion: fileMatch
 fileMatchPattern: "frontend/**/*.{vue,js,ts}"
+description: Vue 3 frontend standards for components, composables, CSS, and accessibility
 ---
 
 # Vue Frontend Standards — Media Tracker
