@@ -1336,3 +1336,9 @@
 - Action: When the user decides on an approach, the implementation scope varies: Option 1 (URLs only) touches ImageService + _to_response + frontend resolveImageUrl. Option 2 (R2) touches ImageService + serve_image + config + requirements.txt + render.yaml env vars. Option 3 is already partially implemented. No changes needed until the user picks a direction.
 - Confidence: high
 
+
+**[2026-04-18] — Refactor: imágenes locales → URLs externas**
+- Observation: Migrar de almacenamiento local de imágenes a URLs externas tocó 9 archivos de backend (ImageService, config, main, 3 services, 2 routers, seed script), 1 migración, y 5 archivos de test (2 eliminados, 3 actualizados). El frontend no necesitó cambios porque `resolveImageUrl()` ya manejaba URLs que empiezan con `http`. La clave fue que `_to_response()` en 3 servicios distintos (media, recommendation, explore) construía `f"/images/{image_path}"` — todos necesitaban actualizarse a devolver `image_path` directamente. El endpoint `/images/{filename}` en main.py se eliminó completamente junto con sus imports (IMAGE_STORAGE_PATH, TMDB_API_KEY, FileResponse, HTTPException, select, MediaItem, ImageService). La migración 007 nullifica los image_path viejos que no empiezan con `http`. Los tests de imagen existentes (test_image_resilience, test_property_image_placeholder_bugfix) se eliminaron porque testeaban comportamiento de disco local que ya no existe.
+- Action: Cuando se cambia la estrategia de almacenamiento de un recurso (local → externo), buscar TODOS los puntos donde se construye la URL del recurso (grep por el patrón de construcción, e.g. `f"/images/{`). También buscar todos los tests que importan constantes del módulo cambiado (`_DEFAULT_IMAGES`, `IMAGE_STORAGE_PATH`). El frontend puede no necesitar cambios si ya tiene lógica de detección de URLs absolutas.
+- Confidence: high
+

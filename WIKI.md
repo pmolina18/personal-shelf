@@ -32,14 +32,13 @@ Personal Shelf es una plataforma social de **Media Tracking**: una aplicación w
 │   :5173         │ /api  │  :8000            │ pg    │  :5432     │
 └─────────────────┘       └──────────────────┘       └────────────┘
          │                        │
-    Vercel (prod)                 ├── /images (static + on-demand re-download)
-                                 ├── MCP Server (herramientas IA)
-                                 ├── TMDB API (metadata + imágenes)
-                                 ├── Open Library API (metadata libros)
+    Vercel (prod)                 ├── MCP Server (herramientas IA)
+                                 ├── TMDB API (metadata + imágenes externas)
+                                 ├── Open Library API (metadata + portadas externas)
                                  └── GitHub API (sugerencias + acceso)
 ```
 
-El frontend en desarrollo corre en Vite (:5173) y hace proxy de `/api` y `/images` al backend FastAPI (:8000). En producción, el frontend se despliega en Vercel y el backend en Render, con PostgreSQL en Neon.dev y DNS en Cloudflare.
+El frontend en desarrollo corre en Vite (:5173) y hace proxy de `/api` al backend FastAPI (:8000). En producción, el frontend se despliega en Vercel y el backend en Render, con PostgreSQL en Neon.dev y DNS en Cloudflare. Las imágenes se sirven directamente desde las CDN externas de TMDB y Open Library (no hay almacenamiento local).
 
 ---
 
@@ -68,11 +67,10 @@ personal-shelf/
 ├── backend/
 │   ├── config.py                # Configuración (DB, JWT, API keys, paths)
 │   ├── db.py                    # Engine async + session factory
-│   ├── main.py                  # App FastAPI, CORS, routers, health check, images
+│   ├── main.py                  # App FastAPI, CORS, routers, health check
 │   ├── dependencies.py          # get_current_user, require_admin (JWT)
 │   ├── alembic.ini              # Config de Alembic
 │   ├── requirements.txt         # Dependencias Python
-│   ├── images/                  # Almacenamiento de imágenes descargadas
 │   ├── mcp/
 │   │   └── server.py            # Servidor MCP con herramientas IA
 │   ├── migrations/
@@ -83,7 +81,8 @@ personal-shelf/
 │   │       ├── 003_add_recommendations_table.py
 │   │       ├── 004_add_suggestions_table.py
 │   │       ├── 005_recommendations_status_column.py
-│   │       └── 006_add_pending_at.py
+│   │       ├── 006_add_pending_at.py
+│   │       └── 007_image_path_to_external_urls.py
 │   ├── models/
 │   │   ├── media.py             # MediaItem, Tag, media_tags
 │   │   ├── user.py              # User, FriendRequest, friendships
@@ -113,7 +112,7 @@ personal-shelf/
 │       ├── auth_service.py           # Registro, login, JWT, bcrypt
 │       ├── media_service.py          # CRUD + filtros + paginación + tags
 │       ├── stats_service.py          # Agregaciones y estadísticas
-│       ├── image_service.py          # Descarga de imágenes (TMDB)
+│       ├── image_service.py          # URLs de imágenes externas (TMDB + Open Library)
 │       ├── metadata_service.py       # Búsqueda de metadatos (TMDB + Open Library)
 │       ├── friend_service.py         # Solicitudes, amistades, búsqueda de usuarios
 │       ├── feed_service.py           # Feed social + colección de amigo
@@ -123,7 +122,7 @@ personal-shelf/
 │       └── github_service.py         # PRs de acceso + issues de sugerencias
 ├── frontend/
 │   ├── package.json
-│   ├── vite.config.js           # Proxy /api y /images → backend, PWA config
+│   ├── vite.config.js           # Proxy /api → backend, PWA config
 │   ├── index.html
 │   ├── eslint.config.js
 │   └── src/
@@ -168,7 +167,7 @@ personal-shelf/
 │           ├── RecommendationsView.vue # Recomendaciones recibidas
 │           ├── SuggestionsView.vue   # Buzón de sugerencias
 │           └── AdminView.vue         # Dashboard admin
-├── tests/                       # 26 archivos de tests (pytest + Hypothesis)
+├── tests/                       # 23 archivos de tests (pytest + Hypothesis)
 ├── allowed_admins               # Lista de emails con acceso admin
 ├── render.yaml                  # Config de despliegue en Render
 ├── DEPLOY.md                    # Guía de despliegue completa
@@ -231,7 +230,7 @@ npm install
 npm run dev
 ```
 
-Frontend en `http://localhost:5173`. Vite hace proxy automático de `/api` y `/images` al backend.
+Frontend en `http://localhost:5173`. Vite hace proxy automático de `/api` al backend.
 
 ---
 
@@ -254,6 +253,7 @@ Sobreescribible con `DATABASE_URL`.
 | 004 | `004_add_suggestions_table.py` | Tabla suggestions con integración GitHub |
 | 005 | `005_recommendations_status_column.py` | Migración de is_read boolean a status enum (pending/accepted/dismissed) |
 | 006 | `006_add_pending_at.py` | Columna pending_at en media_items |
+| 007 | `007_image_path_to_external_urls.py` | Nullifica image_path locales obsoletos (los que no empiezan con `http`) |
 
 ### Comandos de Alembic
 
@@ -378,7 +378,7 @@ Incluye: métricas de usuarios (total, nuevos/activos esta semana), métricas de
 
 ### Imágenes
 
-Las imágenes se sirven en `GET /images/{filename}`. Si el archivo no existe en disco y `TMDB_API_KEY` está configurada, el backend intenta re-descargarlo automáticamente antes de devolver 404.
+Las imágenes se almacenan como URLs externas directas en `image_path` (e.g. `https://image.tmdb.org/t/p/w500/...`, `https://covers.openlibrary.org/b/id/...-L.jpg`). El `ImageService` busca la imagen en TMDB (películas/series) u Open Library (libros) y devuelve la URL externa sin descargar nada a disco. El frontend las muestra directamente desde las CDN de origen.
 
 ---
 
@@ -472,7 +472,7 @@ python -m pytest tests/test_property_*.py -v
 cd frontend && npm run test
 ```
 
-### Archivos de test (26 archivos backend)
+### Archivos de test (23 archivos backend)
 
 | Archivo | Cobertura |
 |---------|-----------|
@@ -483,8 +483,7 @@ cd frontend && npm run test
 | `test_recommendation_router.py` | Envío, listado, aceptar, descartar |
 | `test_stats_service.py` | Servicio de estadísticas |
 | `test_stats_export_routers.py` | Endpoints de stats |
-| `test_image_service.py` | Descarga de imágenes |
-| `test_image_resilience.py` | Re-descarga on-demand |
+| `test_image_service.py` | Búsqueda de URLs de imágenes externas |
 | `test_health_cors.py` | Health check y CORS |
 | `test_property_auth.py` | Props 1-10: registro, login, tokens, refresh |
 | `test_property_creation.py` | Props: creación de items |
@@ -492,7 +491,7 @@ cd frontend && npm run test
 | `test_property_filtering.py` | Props: filtrado y búsqueda |
 | `test_property_status_rating_tags.py` | Props: cambios de estado, rating, tags |
 | `test_property_stats_export.py` | Props: estadísticas |
-| `test_property_default_image.py` | Props: imagen por defecto |
+| `test_property_default_image.py` | Props: URL de imagen externa |
 | `test_property_mcp.py` | Props: herramientas MCP |
 | `test_property_multitenancy.py` | Props 11-14: aislamiento multi-usuario |
 | `test_property_friends.py` | Props 15-23: sistema de amistades |
@@ -500,7 +499,6 @@ cd frontend && npm run test
 | `test_property_recommendations.py` | Props: recomendaciones |
 | `test_property_datetime_bugfix.py` | Props: timestamps de estado |
 | `test_property_preservation_bugfix.py` | Props: preservación de campos en update |
-| `test_property_image_placeholder_bugfix.py` | Props: placeholder de imágenes |
 
 ---
 
@@ -516,7 +514,7 @@ cd frontend && npm run test
 | `GITHUB_REPO` | `""` | Repositorio GitHub (formato `owner/repo`) |
 | `GITHUB_DEFAULT_BRANCH` | `main` | Rama por defecto del repo |
 | `VITE_API_BASE_URL` | (solo producción) | URL base del backend para el frontend |
-| `VITE_IMAGES_BASE_URL` | (solo producción) | URL base para imágenes |
+| `VITE_IMAGES_BASE_URL` | (solo producción) | URL base para imágenes locales (obsoleta — las imágenes ahora son URLs externas directas) |
 
 ---
 
@@ -545,7 +543,7 @@ cd frontend && npm run test
 | year | INTEGER | Nullable |
 | creator | VARCHAR(255) | Nullable |
 | notes | TEXT | Nullable |
-| image_path | VARCHAR(500) | Nullable |
+| image_path | VARCHAR(500) | Nullable, URL externa (TMDB / Open Library) |
 | created_at | TIMESTAMP | server_default: now() |
 | updated_at | TIMESTAMP | server_default: now(), onupdate: now() |
 | started_at | TIMESTAMP | Nullable (auto al cambiar a in_progress) |
@@ -632,7 +630,8 @@ Ver `DEPLOY.md` para la guía completa paso a paso.
 - El backend usa SQLAlchemy 2.0 async con `asyncpg`. Todas las queries son async.
 - Alembic está configurado para async con el patrón `async_engine_from_config` + `run_async_migrations()`.
 - Los tags usan una relación many-to-many con `lazy="selectin"` para evitar N+1 queries.
-- Las imágenes se descargan automáticamente de TMDB al crear/actualizar un item y se almacenan en `backend/images/`. Si un archivo se pierde (redeploy en Render), se re-descarga on-demand.
+- Las imágenes se obtienen como URLs externas de TMDB (películas/series) y Open Library (libros). `ImageService.fetch_image()` retorna `str | None` (URL completa o None). No hay almacenamiento local de imágenes — `image_path` en la DB contiene directamente la URL externa. Esto elimina problemas con filesystems efímeros (Render) y simplifica el despliegue.
+- El frontend (`resolveImageUrl()` en `media.js`) detecta URLs que empiezan con `http` y las pasa directamente, por lo que el cambio a URLs externas fue transparente.
 - Los metadatos (año, creador, descripción, géneros) se autocompletan desde TMDB (películas/series) y Open Library (libros) al crear un item.
 - La autenticación usa JWT con access token (30 min) y refresh token (7 días). Las contraseñas se hashean con bcrypt.
 - Multi-tenancy: cada usuario solo ve y modifica sus propios items. Los servicios filtran por `user_id` en todas las operaciones.
@@ -644,6 +643,6 @@ Ver `DEPLOY.md` para la guía completa paso a paso.
 - El frontend usa composables para compartir lógica de API entre vistas, con refs independientes por invocación para evitar state leakage.
 - Los property tests usan `@given` de Hypothesis con `asyncio.run()` internamente (no `@pytest.mark.asyncio`) porque `@given` no es compatible con async fixtures.
 - Los tests de router usan `httpx.AsyncClient` + `ASGITransport` con `app.dependency_overrides` para inyectar sesiones SQLite in-memory.
-- Los routers se registran antes del endpoint de imágenes en `main.py` porque los mounts son catch-all.
-- Vite hace proxy de `/api` y `/images` al backend en desarrollo, evitando problemas de CORS.
+- Los routers se registran en `main.py` antes del health check.
+- Vite hace proxy de `/api` al backend en desarrollo, evitando problemas de CORS.
 - La app incluye soporte PWA con `vite-plugin-pwa` y un componente `ReloadPrompt` para notificar actualizaciones.
