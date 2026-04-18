@@ -48,10 +48,10 @@ simple_media_create = st.builds(
 )
 
 image_path_strategy = st.text(
-    alphabet=st.characters(whitelist_categories=("L", "N"), whitelist_characters="-_./"),
-    min_size=1,
+    alphabet=st.characters(whitelist_categories=("L", "N"), whitelist_characters="-_./:%"),
+    min_size=10,
     max_size=100,
-).filter(lambda s: s.strip() and not s.startswith("/"))
+).map(lambda s: f"https://image.tmdb.org/t/p/w500/{s.strip()}.jpg").filter(lambda s: len(s) > 20)
 
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 
@@ -185,8 +185,8 @@ def test_delete_completes_without_error(create_data):
     img_path=image_path_strategy,
 )
 def test_to_response_builds_image_url(create_data, img_path):
-    """For any item with image_path set, _to_response() builds
-    image_url as /images/<image_path>.
+    """For any item with image_path set to an external URL, _to_response()
+    returns image_url equal to image_path (the external URL directly).
 
     **Validates: Requirements 3.4, 3.5, 3.6, 3.7**
     """
@@ -204,9 +204,8 @@ def test_to_response_builds_image_url(create_data, img_path):
 
             response = _to_response(item)
 
-            expected_url = f"/images/{img_path}"
-            assert response.image_url == expected_url, (
-                f"image_url={response.image_url!r}, expected {expected_url!r}"
+            assert response.image_url == img_path, (
+                f"image_url={response.image_url!r}, expected {img_path!r}"
             )
 
     asyncio.run(_run())

@@ -1,8 +1,8 @@
-"""Unit tests for ImageService."""
+"""Unit tests for ImageService — external URL-based image fetching."""
 
 import pytest
 
-from backend.services.image_service import ImageService, _DEFAULT_IMAGES
+from backend.services.image_service import ImageService
 
 
 @pytest.fixture
@@ -11,79 +11,72 @@ def image_service():
     return ImageService()
 
 
-class TestGetDefaultImage:
-    """Tests for get_default_image method."""
+class TestFetchImage:
+    """Tests for fetch_image method."""
 
     @pytest.mark.asyncio
-    async def test_returns_movie_default(self, image_service):
-        result = await image_service.get_default_image("movie")
-        assert result == "default_movie.png"
-
-    @pytest.mark.asyncio
-    async def test_returns_book_default(self, image_service):
-        result = await image_service.get_default_image("book")
-        assert result == "default_book.png"
-
-    @pytest.mark.asyncio
-    async def test_returns_series_default(self, image_service):
-        result = await image_service.get_default_image("series")
-        assert result == "default_series.png"
-
-    @pytest.mark.asyncio
-    async def test_unknown_type_falls_back_to_movie(self, image_service):
-        result = await image_service.get_default_image("unknown")
-        assert result == "default_movie.png"
-
-    @pytest.mark.asyncio
-    async def test_each_media_type_has_distinct_default(self):
-        defaults = set(_DEFAULT_IMAGES.values())
-        assert len(defaults) == 3, "Each media type must have a distinct default image"
-
-
-class TestGuessExtension:
-    """Tests for _guess_extension static method."""
-
-    def test_jpeg_content_type(self):
-        assert ImageService._guess_extension("image/jpeg", "") == ".jpg"
-
-    def test_png_content_type(self):
-        assert ImageService._guess_extension("image/png", "") == ".png"
-
-    def test_falls_back_to_url(self):
-        assert ImageService._guess_extension("application/octet-stream", "http://example.com/img.png") == ".png"
-
-    def test_defaults_to_jpg(self):
-        assert ImageService._guess_extension("", "http://example.com/image") == ".jpg"
-
-
-class TestFetchImageFallback:
-    """Tests that fetch_image falls back to default on errors."""
-
-    @pytest.mark.asyncio
-    async def test_returns_default_when_no_api_keys(self, image_service, monkeypatch):
-        monkeypatch.setattr("backend.config.TMDB_API_KEY", "")
+    async def test_returns_none_when_search_fails(self, image_service, monkeypatch):
+        """fetch_image returns None when no external API finds an image."""
 
         async def _fail_search(self, title, media_type):
             return None
 
         monkeypatch.setattr(ImageService, "_search_image_url", _fail_search)
-        result = await image_service.fetch_image("Nonexistent Movie 12345xyz", "movie")
-        assert result == "default_movie.png"
+        result = await image_service.fetch_image("Nonexistent Movie", "movie")
+        assert result is None
 
     @pytest.mark.asyncio
-    async def test_returns_default_for_book_when_apis_fail(self, image_service, monkeypatch):
-        async def _fail_search(self, title, media_type):
-            return None
+    async def test_returns_url_when_search_succeeds(self, image_service, monkeypatch):
+        """fetch_image returns the external URL when search succeeds."""
+        expected_url = "https://image.tmdb.org/t/p/w500/abc123.jpg"
 
-        monkeypatch.setattr(ImageService, "_search_image_url", _fail_search)
-        result = await image_service.fetch_image("Some Book", "book")
-        assert result == "default_book.png"
+        async def _success_search(self, title, media_type):
+            return expected_url
+
+        monkeypatch.setattr(ImageService, "_search_image_url", _success_search)
+        result = await image_service.fetch_image("Test Movie", "movie")
+        assert result == expected_url
 
     @pytest.mark.asyncio
-    async def test_returns_default_for_series_when_apis_fail(self, image_service, monkeypatch):
-        async def _fail_search(self, title, media_type):
-            return None
+    async def test_returns_none_on_exception(self, image_service, monkeypatch):
+        """fetch_image returns None when search raises an exception."""
 
-        monkeypatch.setattr(ImageService, "_search_image_url", _fail_search)
-        result = await image_service.fetch_image("Some Series", "series")
-        assert result == "default_series.png"
+        async def _raise_search(self, title, media_type):
+            raise RuntimeError("API down")
+
+        monkeypatch.setattr(ImageService, "_search_image_url", _raise_search)
+        result = await image_service.fetch_image("Test Movie", "movie")
+        assert result is None
+
+
+class TestSearchTmdb:
+    """Tests for _search_tmdb method."""
+
+    @pytest.mark.asyncio
+    async def test_returns_none_without_api_key(self, image_service, monkeypatch):
+        """_search_tmdb returns None when TMDB_API_KEY is empty."""
+        monkeypatch.setattr("backend.services.image_service.TMDB_API_KEY", "")
+        result = await image_service._search_tmdb("Test", "movie")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_returns_tmdb_url_format(self, image_service, monkeypatch):
+        """_search_tmdb returns a URL starting with https://image.tmdb.org."""
+        import httpx
+
+        monkeypatch.setattr("backend.services.image_service.TMDB_API_KEY", "fake-key")
+
+        class FakeResponse:
+            status_code = 200
+            def raise_for_status(self): pass
+            def json(self):
+                return {"results": [{"poster_path": "/abc123.jpg"}]}
+
+        class FakeClient:
+            async def __aenter__(self): return self
+            async def __aexit__(self, *a): pass
+            async def get(self, url, **kw): return FakeResponse()
+
+        monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: FakeClient())
+        result = await image_service._search_tmdb("Test", "movie")
+        assert result == "https://image.tmdb.org/t/p/w500/abc123.jpg"

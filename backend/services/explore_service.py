@@ -208,7 +208,7 @@ class ExploreService:
                     media_type=item.media_type,
                     year=item.year,
                     creator=item.creator,
-                    image_url=f"/images/{item.image_path}" if item.image_path else None,
+                    image_url=item.image_path if item.image_path else None,
                     tags=[t.name for t in item.tags] if item.tags else [],
                     friends_have=fh,
                     friends_recommended=fr,

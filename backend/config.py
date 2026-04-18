@@ -22,10 +22,7 @@ def is_neon_db() -> bool:
     return ".neon.tech" in DATABASE_URL
 
 
-# Image storage
 BASE_DIR = Path(__file__).resolve().parent
-IMAGE_STORAGE_PATH: Path = BASE_DIR / "images"
-IMAGE_STORAGE_PATH.mkdir(parents=True, exist_ok=True)
 
 # External API keys
 TMDB_API_KEY: str = os.getenv("TMDB_API_KEY", "")

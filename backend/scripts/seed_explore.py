@@ -162,10 +162,10 @@ async def _seed_tmdb_items(
         session.add(item)
         await session.flush()
 
-        # Fetch poster image
+        # Fetch poster image URL
         try:
-            image_filename = await _image_service.fetch_image(title, media_type)
-            item.image_path = image_filename
+            image_url = await _image_service.fetch_image(title, media_type)
+            item.image_path = image_url
         except Exception:
             logger.exception("Image fetch failed for '%s'", title)
 

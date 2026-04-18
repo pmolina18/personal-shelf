@@ -38,7 +38,7 @@ def _to_response(item: MediaItem) -> MediaResponse:
         year=item.year,
         creator=item.creator,
         notes=item.notes,
-        image_url=f"/images/{item.image_path}" if item.image_path else None,
+        image_url=item.image_path if item.image_path else None,
         tags=[t.name for t in item.tags],
         created_at=item.created_at,
         updated_at=item.updated_at,

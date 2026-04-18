@@ -30,11 +30,7 @@ def _to_response(rec: Recommendation) -> RecommendationResponse:
     Returns:
         RecommendationResponse con los datos formateados.
     """
-    image_url = (
-        f"/images/{rec.media_item.image_path}"
-        if rec.media_item.image_path
-        else None
-    )
+    image_url = rec.media_item.image_path if rec.media_item.image_path else None
     return RecommendationResponse(
         id=rec.id,
         sender=RecommendationSender(

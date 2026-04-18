@@ -1,7 +1,8 @@
-# Feature: media-tracker, Property 14: Default image based on Media_Type
-"""Property test for default image fallback (Property 14).
+# Feature: media-tracker, Property 14: Image URL from external APIs
+"""Property test for image URL fetching (Property 14).
 
-Validates: Requirement 12.5
+Validates: Requirement 12.5 — images come from external APIs (TMDB, Open Library).
+When APIs fail, fetch_image returns None (frontend shows placeholder).
 """
 
 import asyncio
@@ -11,7 +12,7 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from backend.schemas.media import MediaType
-from backend.services.image_service import ImageService, _DEFAULT_IMAGES
+from backend.services.image_service import ImageService
 
 # -- Hypothesis strategies ---------------------------------------------------
 
@@ -22,7 +23,7 @@ valid_media_types = st.sampled_from(
 random_titles = st.text(min_size=1, max_size=100).filter(lambda t: t.strip())
 
 
-# -- Property 14: Default image based on Media_Type --------------------------
+# -- Property 14: Image fetch returns None when APIs fail --------------------
 
 
 @settings(max_examples=100, deadline=None)
@@ -30,12 +31,12 @@ random_titles = st.text(min_size=1, max_size=100).filter(lambda t: t.strip())
     title=random_titles,
     media_type=valid_media_types,
 )
-def test_default_image_assigned_per_media_type(title, media_type):
+def test_fetch_image_returns_none_when_apis_fail(title, media_type):
     """**Validates: Requirements 12.5**
 
-    For any Media_Item whose Image_Service does not find an image, the API
-    must assign a default generic image corresponding to the Media_Type of
-    the item (a different image for movies, books, and series).
+    For any Media_Item whose ImageService does not find an image from
+    external APIs, fetch_image returns None. The frontend handles
+    displaying a placeholder based on media_type.
     """
 
     async def _run():
@@ -46,22 +47,36 @@ def test_default_image_assigned_per_media_type(title, media_type):
         ):
             result = await svc.fetch_image(title, media_type.value)
 
-        expected_default = _DEFAULT_IMAGES[media_type.value]
-        assert result == expected_default, (
-            f"Expected default '{expected_default}' for {media_type.value}, "
-            f"got '{result}'"
+        assert result is None, (
+            f"Expected None when APIs fail for {media_type.value}, got '{result}'"
         )
 
     asyncio.run(_run())
 
 
-def test_default_images_are_distinct():
+@settings(max_examples=100, deadline=None)
+@given(
+    title=random_titles,
+    media_type=valid_media_types,
+)
+def test_fetch_image_returns_url_when_api_succeeds(title, media_type):
     """**Validates: Requirements 12.5**
 
-    Each media type must receive a distinct default image so that users
-    can visually distinguish between movies, books, and series.
+    When an external API returns an image URL, fetch_image passes it
+    through directly without downloading.
     """
-    defaults = [_DEFAULT_IMAGES[mt.value] for mt in MediaType]
-    assert len(defaults) == len(set(defaults)), (
-        f"Default images are not all distinct: {defaults}"
-    )
+    fake_url = "https://image.tmdb.org/t/p/w500/test123.jpg"
+
+    async def _run():
+        svc = ImageService()
+
+        with patch.object(
+            svc, "_search_image_url", new_callable=AsyncMock, return_value=fake_url
+        ):
+            result = await svc.fetch_image(title, media_type.value)
+
+        assert result == fake_url, (
+            f"Expected '{fake_url}', got '{result}'"
+        )
+
+    asyncio.run(_run())

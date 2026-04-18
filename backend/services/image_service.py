@@ -1,70 +1,47 @@
-"""Image service for searching, downloading, and storing media images.
+"""Image service for searching media images from external APIs.
 
-Searches external APIs (TMDB for movies/series, Open Library for books)
-for representative images, downloads them to local storage, and provides
-fallback default images when no result is found or an error occurs.
+Searches TMDB (movies/series) and Open Library (books) for representative
+images and returns their external URLs directly, avoiding local storage
+on ephemeral filesystems like Render.
 """
 
-import hashlib
 import logging
 
 import httpx
 
-from backend.config import IMAGE_STORAGE_PATH, TMDB_API_KEY
+from backend.config import TMDB_API_KEY
 
 logger = logging.getLogger(__name__)
 
-# Default image filenames per media type
-_DEFAULT_IMAGES: dict[str, str] = {
-    "movie": "default_movie.png",
-    "book": "default_book.png",
-    "series": "default_series.png",
-}
-
 
 class ImageService:
-    """Service for fetching and storing media images.
+    """Service for fetching media image URLs from external APIs.
 
-    Searches external APIs by title and media type, downloads the best
-    match, and stores it locally. Falls back to a default image when
-    the search fails or no results are found.
+    Returns external URLs directly (e.g. https://image.tmdb.org/...)
+    instead of downloading to local storage.
     """
 
-    async def fetch_image(self, title: str, media_type: str) -> str:
-        """Search for a media image and store it locally.
+    async def fetch_image(self, title: str, media_type: str) -> str | None:
+        """Search for a media image URL from external APIs.
 
         Tries TMDB for movies/series and Open Library for books. If the
-        primary source fails, attempts the other as a fallback. On any
-        failure, returns a default image path.
+        primary source fails, attempts the other as a fallback.
 
         Args:
             title: The title of the media item to search for.
             media_type: One of "movie", "book", or "series".
 
         Returns:
-            The filename of the stored image (relative to IMAGE_STORAGE_PATH).
+            The external image URL, or None if nothing was found.
         """
         try:
-            image_url = await self._search_image_url(title, media_type)
-            if image_url:
-                local_path = await self._download_and_store(image_url, title, media_type)
-                if local_path:
-                    return local_path
+            url = await self._search_image_url(title, media_type)
+            if url:
+                return url
         except Exception:
             logger.exception("Error fetching image for '%s' (%s)", title, media_type)
 
-        return await self.get_default_image(media_type)
-
-    async def get_default_image(self, media_type: str) -> str:
-        """Return the default image filename for a given media type.
-
-        Args:
-            media_type: One of "movie", "book", or "series".
-
-        Returns:
-            The default image filename for the media type.
-        """
-        return _DEFAULT_IMAGES.get(media_type, _DEFAULT_IMAGES["movie"])
+        return None
 
     async def _search_image_url(self, title: str, media_type: str) -> str | None:
         """Search external APIs for an image URL.
@@ -157,76 +134,3 @@ class ImageService:
         except Exception:
             logger.exception("Open Library search failed for '%s'", title)
             return None
-
-    async def _download_and_store(
-        self, image_url: str, title: str, media_type: str
-    ) -> str | None:
-        """Download an image from a URL and store it locally.
-
-        The filename is derived from a hash of the title and media type
-        to ensure uniqueness and avoid filesystem issues with special
-        characters.
-
-        Args:
-            image_url: The URL to download the image from.
-            title: The media title (used for filename generation).
-            media_type: The media type (used for filename generation).
-
-        Returns:
-            The stored filename, or None if the download failed.
-        """
-        try:
-            async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
-                resp = await client.get(image_url)
-                resp.raise_for_status()
-                content = resp.content
-
-            if not content:
-                return None
-
-            # Determine extension from content type or URL
-            ext = self._guess_extension(resp.headers.get("content-type", ""), image_url)
-
-            # Generate a stable filename from title + media_type
-            name_hash = hashlib.md5(
-                f"{title}:{media_type}".encode()
-            ).hexdigest()[:12]
-            filename = f"{media_type}_{name_hash}{ext}"
-
-            filepath = IMAGE_STORAGE_PATH / filename
-            filepath.write_bytes(content)
-
-            logger.info("Stored image for '%s' (%s) at %s", title, media_type, filepath)
-            return filename
-        except Exception:
-            logger.exception("Failed to download image from %s", image_url)
-            return None
-
-    @staticmethod
-    def _guess_extension(content_type: str, url: str) -> str:
-        """Guess the file extension from content type or URL.
-
-        Args:
-            content_type: The HTTP Content-Type header value.
-            url: The image URL.
-
-        Returns:
-            A file extension string including the dot (e.g. ".jpg").
-        """
-        ct_map = {
-            "image/jpeg": ".jpg",
-            "image/png": ".png",
-            "image/gif": ".gif",
-            "image/webp": ".webp",
-        }
-        for ct, ext in ct_map.items():
-            if ct in content_type:
-                return ext
-
-        # Fall back to URL extension
-        url_lower = url.lower()
-        for ext in (".jpg", ".jpeg", ".png", ".gif", ".webp"):
-            if ext in url_lower:
-                return ext if ext != ".jpeg" else ".jpg"
-
-        return ".jpg"

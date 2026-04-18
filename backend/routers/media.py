@@ -108,15 +108,16 @@ async def create_media(
 
     result = await _media_service.create(session, data, user_id=user.id)
 
-    image_filename = await _image_service.fetch_image(
+    image_url = await _image_service.fetch_image(
         data.title, data.media_type.value,
     )
-    item = await session.get(MediaItem, result.id)
-    if item is not None:
-        item.image_path = image_filename
-        await session.commit()
-        await session.refresh(item)
-        return _to_response(item)
+    if image_url:
+        item = await session.get(MediaItem, result.id)
+        if item is not None:
+            item.image_path = image_url
+            await session.commit()
+            await session.refresh(item)
+            return _to_response(item)
 
     return result
 
@@ -223,15 +224,16 @@ async def update_media(
     result = await _media_service.update(session, media_id, data, user_id=user.id)
 
     if "title" in changed or "media_type" in changed:
-        image_filename = await _image_service.fetch_image(
+        image_url = await _image_service.fetch_image(
             result.title, result.media_type.value,
         )
-        item = await session.get(MediaItem, result.id)
-        if item is not None:
-            item.image_path = image_filename
-            await session.commit()
-            await session.refresh(item)
-            return _to_response(item)
+        if image_url:
+            item = await session.get(MediaItem, result.id)
+            if item is not None:
+                item.image_path = image_url
+                await session.commit()
+                await session.refresh(item)
+                return _to_response(item)
 
     return result
 
@@ -299,5 +301,5 @@ async def get_media_image(
     if item.user_id != user.id:
         raise HTTPException(status_code=403, detail="Access denied")
 
-    image_url = f"/images/{item.image_path}" if item.image_path else None
+    image_url = item.image_path if item.image_path else None
     return {"image_url": image_url}

@@ -129,17 +129,18 @@ async def add_from_explore(
     except Exception:
         logger.exception("Metadata autofill failed for explore add '%s'", data.title)
 
-    # Fetch image (best-effort)
+    # Fetch image URL (best-effort)
     try:
-        image_filename = await _image_service.fetch_image(
+        image_url = await _image_service.fetch_image(
             data.title, data.media_type.value,
         )
-        item = await session.get(MediaItem, result.id)
-        if item is not None:
-            item.image_path = image_filename
-            await session.commit()
-            await session.refresh(item)
-            return _to_response(item)
+        if image_url:
+            item = await session.get(MediaItem, result.id)
+            if item is not None:
+                item.image_path = image_url
+                await session.commit()
+                await session.refresh(item)
+                return _to_response(item)
     except Exception:
         logger.exception("Image fetch failed for explore add '%s'", data.title)
 
