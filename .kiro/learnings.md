@@ -1342,3 +1342,15 @@
 - Action: Cuando se cambia la estrategia de almacenamiento de un recurso (local → externo), buscar TODOS los puntos donde se construye la URL del recurso (grep por el patrón de construcción, e.g. `f"/images/{`). También buscar todos los tests que importan constantes del módulo cambiado (`_DEFAULT_IMAGES`, `IMAGE_STORAGE_PATH`). El frontend puede no necesitar cambios si ya tiene lógica de detección de URLs absolutas.
 - Confidence: high
 
+
+**[2026-04-18] — Session: advisory on Spotify podcast integration**
+- Observation: No code changes. User asked about adding Spotify podcast tracking. Proposed two approaches: (A) podcast as new media_type with Spotify Search API for metadata autofill (Client Credentials flow, no user OAuth), or (B) full OAuth + sync. Recommended starting with Approach A since it fits the existing architecture perfectly — same model, services, recommendations, explore all work automatically with a new media_type value. Spotify Search API returns `images[0].url` which aligns with the new external URL image strategy. The Client Credentials flow only needs `SPOTIFY_CLIENT_ID` + `SPOTIFY_CLIENT_SECRET` (no user login). Existing patterns held — no new technical issues discovered.
+- Action: When the user confirms, add to IDEAS.md and create a spec. The implementation touches: MediaType enum, MetadataService (new _search_spotify), ImageService (Spotify images are already URLs), frontend (podcast icon/filter). Everything else (CRUD, recommendations, explore, stats, tags) works automatically.
+- Confidence: high
+
+
+**[2026-04-18] — Spec creation: spotify-podcasts (requirements + design + tasks, direct)**
+- Observation: Existing patterns held. Writing the full three-phase spec directly (without subagent) was fast since the codebase context was already loaded from the previous image refactor session. The Spotify Web API Search endpoint (`/v1/search?type=show`) returns show name, publisher, description, and images — all mapping cleanly to the existing `MetadataCandidate` schema. Key design decision: create a shared `spotify_auth.py` module for token management (Client Credentials flow) rather than duplicating token logic in both MetadataService and ImageService. No migration needed since `media_type` is VARCHAR(20) in the DB, not a PostgreSQL enum. The spec was written in Spanish following the spec-language steering.
+- Action: When adding a new media_type that uses a different external API, the pattern is: (1) add to enum, (2) create auth helper if the API needs tokens, (3) add routing in MetadataService.search() and ImageService._search_image_url(), (4) update frontend labels/filters/colors. Everything else (CRUD, recommendations, explore, stats, tags) works automatically because it's driven by the enum.
+- Confidence: high
+

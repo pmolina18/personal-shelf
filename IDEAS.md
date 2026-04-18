@@ -174,3 +174,13 @@ Cada idea sigue este formato:
 - Descripción: Nueva página de perfil que se abra al hacer click en el nombre de usuario en la barra lateral. Muestra datos del usuario y posiblemente integra las estadísticas actuales. Además, permite cambiar el nombre de usuario y la contraseña.
 - Contexto: Archivos afectados: nuevo `ProfileView.vue`, `backend/routers/auth.py` (endpoints PATCH para username/password), `backend/services/auth_service.py` (métodos update_username, update_password), `backend/schemas/auth.py` (schemas de update), `frontend/src/router/index.js` (nueva ruta /profile), `App.vue` (link en sidebar al perfil). El modelo `User` ya tiene `username` y `email` con constraints UNIQUE. Las estadísticas actuales están en `StatsView.vue` y `StatsService` — se podrían reutilizar o mover al perfil.
 - Notas: Para el cambio de contraseña, pedir la contraseña actual como verificación antes de permitir el cambio. Para el cambio de username, validar unicidad antes de confirmar. Considerar si las estadísticas se mueven al perfil o se mantienen como vista separada con un link desde el perfil.
+
+---
+
+## [IDEA-16] Integración Spotify — Podcasts como nuevo tipo de media
+
+- Tipo: feature
+- Prioridad: alta
+- Descripción: Añadir `podcast` como nuevo `media_type` con integración de la Spotify Web API para autofill de metadatos (nombre, creador/host, imagen, descripción). El usuario busca podcasts manualmente y los añade a su estantería como cualquier otro tipo de media. Todo el sistema existente (CRUD, recomendaciones, explore, tags, stats) funciona automáticamente con el nuevo tipo.
+- Contexto: Spotify Web API Search (`/v1/search?type=show`) devuelve nombre, publisher, descripción, imagen (URL directa) y total de episodios. Usa Client Credentials flow (solo `SPOTIFY_CLIENT_ID` + `SPOTIFY_CLIENT_SECRET`, sin OAuth de usuario). Archivos afectados: `backend/schemas/media.py` (MediaType enum), `backend/services/metadata_service.py` (nuevo `_search_spotify`), `backend/services/image_service.py` (Spotify images ya son URLs externas), `backend/config.py` (nuevas env vars), `frontend/src/components/MediaCard.vue` (icono podcast), `frontend/src/components/FilterBar.vue` (opción podcast en filtro de tipo).
+- Notas: Enfoque A (manual, sin OAuth de usuario) como primera fase. Enfoque B (OAuth + sincronización automática de podcasts seguidos) queda como evolución futura. El Client Credentials flow de Spotify requiere registrar la app en [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) (gratis, inmediato). El token de acceso dura 1 hora y se renueva automáticamente. Considerar también buscar episodios individuales además de shows completos.
